@@ -1,198 +1,212 @@
-﻿<Window xmlns:MaterialControlSimulator="clr-namespace:MaterialControlSimulator"  xmlns:local="clr-namespace:MaterialControlSimulator.Controls" 
+﻿<Window xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"  xmlns:MaterialControlSimulator="clr-namespace:MaterialControlSimulator"  xmlns:local="clr-namespace:MaterialControlSimulator.Controls" 
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:av="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="av"
     x:Class="MaterialControlSimulator.MainWindow"
-    Title="Factory Control"
-    Width="1600"
-    Height="900"
-    Background="#1E1E1E">
+        Title="Material Control Simulator"
+        Width="1700"
+        Height="900"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesignPaper}">
 
 
+    <DockPanel>
 
-    <Grid Margin="10" av:IsLocked="True">
+        <!-- 메뉴 -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File"/>
+            <MenuItem Header="_Simulation"/>
+            <MenuItem Header="_View"/>
+            <MenuItem Header="_Tools"/>
+        </Menu>
 
-        <Grid.RowDefinitions>
-            <RowDefinition Height="55"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="180"/>
-        </Grid.RowDefinitions>
+        <!-- 툴바 -->
+        <ToolBarTray DockPanel.Dock="Top">
+            <ToolBar>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="260"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="340"/>
-        </Grid.ColumnDefinitions>
+                <Button Content="▶ Start"/>
+                <Button Content="■ Stop"/>
+                <Button Content="⏸ Pause"/>
 
-        <!-- 상단 -->
-        <Border
-            Grid.ColumnSpan="3"
-            Background="#2A2A2A"
-            CornerRadius="8" av:IsLocked="True">
+                <Separator/>
 
-            <DockPanel Margin="15" av:IsLocked="True">
+                <Button Content="+"/>
+                <Button Content="-"/>
 
-                <TextBlock
-                    Text="SMART FACTORY CONTROL"
-                    FontSize="24"
-                    FontWeight="Bold"
-                    Foreground="White"
-                    VerticalAlignment="Center" av:IsLocked="True"/>
+            </ToolBar>
+        </ToolBarTray>
 
-                <StackPanel
-                    Orientation="Horizontal"
-                    DockPanel.Dock="Right" av:IsLocked="True">
+        <!-- 상태바 -->
+        <StatusBar DockPanel.Dock="Bottom">
 
-                    <Border
-                        Width="18"
-                        Height="18"
-                        CornerRadius="9"
-                        Background="#00D26A"
-                        Margin="0,0,8,0" av:IsLocked="True"/>
+            <TextBlock Text="Ready"/>
 
-                    <TextBlock
-                        Text="ONLINE"
-                        Foreground="White"
-                        VerticalAlignment="Center"
-                        Margin="0,0,20,0" av:IsLocked="True"/>
+            <Separator/>
 
-                    <TextBlock
-                        Text="2026-08-05 14:32:15"
-                        Foreground="White"
-                        VerticalAlignment="Center" av:IsLocked="True"/>
+            <TextBlock Text="Zoom : 100%"/>
 
-                </StackPanel>
+            <Separator/>
 
-            </DockPanel>
+            <TextBlock Text="Carrier : 0"/>
 
-        </Border>
+            <Separator/>
 
-        <!-- 좌측 설비 -->
-        <Border
-            Grid.Row="1"
-            Margin="0,10,10,10"
-            Background="#2A2A2A"
-            CornerRadius="8" av:IsLocked="True">
+            <TextBlock Text="Simulation : Stop"/>
 
-            <StackPanel Margin="15" av:IsLocked="True">
+        </StatusBar>
 
-                <TextBlock
-                    Text="Equipment"
-                    FontSize="18"
-                    FontWeight="Bold"
-                    Foreground="White" av:IsLocked="True"/>
+        <!-- 본문 -->
+        <Grid>
+            
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="200"/>
+            </Grid.RowDefinitions>
 
-                <ListBox Margin="0,15,0,0" av:IsLocked="True">
+            <!-- 기존 Equipment / Canvas / Property 영역 -->
+            <Grid Grid.Row="0">
 
-                    <ListBoxItem Content="PORT 01" av:IsLocked="True"/>
-                    <ListBoxItem Content="PORT 02" av:IsLocked="True"/>
-                    <ListBoxItem Content="PORT 03" av:IsLocked="True"/>
-                    <ListBoxItem Content="ROBOT 01" av:IsLocked="True"/>
-                    <ListBoxItem Content="ROBOT 02" av:IsLocked="True"/>
-                    <ListBoxItem Content="STOCKER" av:IsLocked="True"/>
-                    <ListBoxItem Content="CONVEYOR" av:IsLocked="True"/>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="300"/>
+                </Grid.ColumnDefinitions>
 
-                </ListBox>
+                <!-- 좌측 Equipment -->
+                <GroupBox Header="Equipment"      
+                      Grid.Column="0"        
+                      Margin="5">
 
-            </StackPanel>
+                    <DockPanel>
 
-        </Border>
+                        <TextBox DockPanel.Dock="Top"           
+                             Margin="5"               
+                             Height="28"/>
 
-        <!-- 중앙 -->
-        <Border
-            Grid.Row="1"
-            Grid.Column="1"
-            Margin="0,10"
-            Background="#262626"
-            CornerRadius="8" av:IsLocked="True">
+                        <TreeView Margin="5"            
+                              Name="EquipmentTree"/>
 
-            <Canvas x:Name="MapCanvas">
+                    </DockPanel>
 
-                <local:PortControl      
-                    x:Name="Port01"  
-                    Id="Port01"      
-                    Canvas.Left="100"        
-                    Canvas.Top="200"/>
+                </GroupBox>
 
-                <local:PortControl      
-                    x:Name="Port02" 
-                    Id="Port02"
-                    Canvas.Left="220"       
-                    Canvas.Top="200"/>
+                <!-- 가운데 Simulation -->
+                <GroupBox Header="Simulation"         
+                      Grid.Column="1"         
+                      Margin="5">
 
-                <local:PortControl      
-                    x:Name="Port03" 
-                    Id="Port03"       
-                    Canvas.Left="220"       
-                    Canvas.Top="300"/>
+                    <ScrollViewer        
+                    HorizontalScrollBarVisibility="Auto"        
+                    VerticalScrollBarVisibility="Auto">
 
-                <local:PortControl      
-                    x:Name="Port04"                     
-                    Id="Port04"
-                    Canvas.Left="340"       
-                    Canvas.Top="300"/>
+                        <Canvas x:Name="SimulationCanvas"               
+                            Width="3000"              
+                            Height="3000"                
+                            Background="#2B2B2B">
 
-                <local:CarrierControl        
-                    x:Name="Carrier01"                     
-                    Id="C01"      
-                    Canvas.Left="0"     
-                    Canvas.Top="200"/>
-            </Canvas>
+                            <local:PortControl      
+                 x:Name="Port01"  
+                 Id="Port01"      
+                 Canvas.Left="100"        
+                 Canvas.Top="200"/>
 
-        </Border>
+                            <local:PortControl      
+                 x:Name="Port02" 
+                 Id="Port02"
+                 Canvas.Left="220"       
+                 Canvas.Top="200"/>
 
-        <!-- 우측 -->
-        <Border
-            Grid.Row="1"
-            Grid.Column="2"
-            Margin="10,10,0,10"
-            Background="#2A2A2A"
-            CornerRadius="8" av:IsLocked="True">
+                            <local:PortControl      
+                 x:Name="Port03" 
+                 Id="Port03"       
+                 Canvas.Left="220"       
+                 Canvas.Top="300"/>
 
-            <DockPanel Margin="15" av:IsLocked="True">
+                            <local:PortControl      
+                 x:Name="Port04"                     
+                 Id="Port04"
+                 Canvas.Left="340"       
+                 Canvas.Top="300"/>
 
-                <TextBlock
-                    DockPanel.Dock="Top"
-                    Text="Alarm"
-                    FontSize="18"
-                    FontWeight="Bold"
-                    Foreground="White" av:IsLocked="True"/>
+                            <local:CarrierControl        
+                 x:Name="Carrier01"                     
+                 Id="C01"      
+                 Canvas.Left="0"     
+                 Canvas.Top="200"/>
 
-                <DataGrid Margin="0,15,0,0" av:IsLocked="True"/>
+                        </Canvas>
 
-            </DockPanel>
+                    </ScrollViewer>
 
-        </Border>
+                </GroupBox>
 
-        <!-- 하단 -->
-        <Border
-            Grid.Row="2"
-            Grid.ColumnSpan="3"
-            Background="#2A2A2A"
-            CornerRadius="8" av:IsLocked="True">
+                <!-- 우측 Properties -->
+                <GroupBox Header="Properties"          
+                      Grid.Column="2"          
+                      Margin="5">
 
-            <DockPanel Margin="15" av:IsLocked="True">
+                    <Grid Margin="10">
 
-                <TextBlock
-                    DockPanel.Dock="Top"
-                    Text="System Log"
-                    FontSize="18"
-                    FontWeight="Bold"
-                    Foreground="White" av:IsLocked="True"/>
+                        <Grid.RowDefinitions>
 
-                <ListBox Margin="0,15,0,0" av:IsLocked="True">
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
 
-                    <ListBoxItem Content="[14:31:02] Robot Move Complete" av:IsLocked="True"/>
-                    <ListBoxItem Content="[14:31:10] Port01 Load" av:IsLocked="True"/>
-                    <ListBoxItem Content="[14:31:25] Carrier Arrived" av:IsLocked="True"/>
-                    <ListBoxItem Content="[14:31:32] Alarm Reset" av:IsLocked="True"/>
+                        </Grid.RowDefinitions>
 
-                </ListBox>
+                        <TextBlock Text="ID"/>
 
-            </DockPanel>
+                        <TextBox Grid.Row="0"                
+                             Margin="70,0,0,5"/>
 
-        </Border>
+                        <TextBlock Grid.Row="1"         
+                               Text="Type"/>
 
-    </Grid>
+                        <TextBox Grid.Row="1"        
+                             Margin="70,0,0,5"/>
+
+                        <TextBlock Grid.Row="2"         
+                               Text="State"/>
+
+                        <TextBox Grid.Row="2"             
+                             Margin="70,0,0,5"/>
+
+                        <TextBlock Grid.Row="3"             
+                               Text="Carrier"/>
+
+                        <TextBox Grid.Row="3"               
+                             Margin="70,0,0,5"/>
+
+                    </Grid>
+
+                </GroupBox>
+
+                <!-- 기존 내용 -->
+
+            </Grid>
+
+
+            <!-- Debug 창 -->
+            <GroupBox       
+                Grid.Row="1"        
+                Header="Debug Output"        
+                Margin="5">
+
+                <TextBox          
+                    x:Name="DebugOutput"    
+                    Background="#1E1E1E"           
+                    Foreground="White"           
+                    IsReadOnly="True"          
+                    TextWrapping="Wrap"           
+                    VerticalScrollBarVisibility="Auto"/>
+
+            </GroupBox>
+        </Grid>
+    </DockPanel>
+
 
 </Window>

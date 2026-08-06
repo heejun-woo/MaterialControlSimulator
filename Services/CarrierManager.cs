@@ -25,8 +25,7 @@ namespace MaterialControlSimulator
             // 목적지가 이미 사용 중인지 확인
             if (!targetNode.Enter(carrier))
             {
-                Debug.WriteLine(
-                    $"Node 사용중 : {targetNode.Id}");
+                Logger.Info($"Node 사용중 : {targetNode.Id}");
 
                 return;
             }
@@ -48,6 +47,8 @@ namespace MaterialControlSimulator
 
             // 현재 위치 갱신
             carrier.CurrentNode = targetNode;
+
+            Logger.Info($"Carrier[{carrier.Id}] 이동 : {targetNode.Id} ");
         }
     }
 }

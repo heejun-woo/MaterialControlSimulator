@@ -28,6 +28,8 @@ namespace MaterialControlSimulator
             _layoutManager.LoadComplete += LayoutManager_LoadComplete;
 
             Loaded += MainWindow_Loaded;
+
+            Logger.MessageReceived += Logger_MessageReceived;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -43,7 +45,7 @@ namespace MaterialControlSimulator
 
         private async void LayoutManager_LoadComplete()
         {
-            Debug.WriteLine("Layout Load Complete");
+            Logger.Info("Layout Load Complete");
 
 
             _simulation = new SimulationManager(
@@ -80,6 +82,18 @@ namespace MaterialControlSimulator
             });
 
             await _simulation.StartAsync();
+        }
+
+        private void Logger_MessageReceived(string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                DebugOutput.AppendText(
+                    message + Environment.NewLine);
+
+
+                DebugOutput.ScrollToEnd();
+            });
         }
     }
 }

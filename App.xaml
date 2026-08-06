@@ -9,13 +9,21 @@
             <ResourceDictionary.MergedDictionaries>
 
                 <materialDesign:BundledTheme
-                BaseTheme="Dark"
-                PrimaryColor="Blue"
-                SecondaryColor="Lime" />
+            BaseTheme="Dark"
+            PrimaryColor="BlueGrey"
+            SecondaryColor="Blue"/>
 
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml"/>
 
             </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
+
+            <Style TargetType="GroupBox"
+       BasedOn="{StaticResource MaterialDesignGroupBox}">
+
+                <Setter Property="Foreground"
+            Value="{DynamicResource MaterialDesignBody}"/>
+
+            </Style>
+        </ResourceDictionary> 
     </Application.Resources>
 </Application>
