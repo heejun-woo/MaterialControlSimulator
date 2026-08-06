@@ -84,8 +84,29 @@
                              Margin="5"               
                              Height="28"/>
 
-                        <TreeView Margin="5"            
-                              Name="EquipmentTree"/>
+                        <TreeView Margin="5"  
+                                  Name="EquipmentTree"
+                                  ItemsSource="{Binding Nodes}">
+                            
+                            <TreeView.ItemTemplate>
+
+                                <HierarchicalDataTemplate>
+
+                                    <StackPanel Orientation="Horizontal">
+
+                                        <TextBlock Text="{Binding Id}"/>
+
+                                        <TextBlock Text="  "/>
+
+                                        <TextBlock Text="{Binding Type}"/>
+
+                                    </StackPanel>
+
+                                </HierarchicalDataTemplate>
+
+                            </TreeView.ItemTemplate>
+
+                        </TreeView>
 
                     </DockPanel>
 
@@ -143,45 +164,28 @@
 
                 <!-- 우측 Properties -->
                 <GroupBox Header="Properties"          
-                      Grid.Column="2"          
-                      Margin="5">
+                          Grid.Column="2"         
+                          Margin="5">
 
-                    <Grid Margin="10">
+                    <DataGrid      
+                        x:Name="PropertyGrid"    
+                        AutoGenerateColumns="False"     
+                        HeadersVisibility="None"       
+                        IsReadOnly="True">
 
-                        <Grid.RowDefinitions>
+                        <DataGrid.Columns>
 
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <DataGridTextColumn
+                                Binding="{Binding Name}"
+                                Width="100"/>
 
-                        </Grid.RowDefinitions>
+                            <DataGridTextColumn
+                                Binding="{Binding Value}"
+                                Width="*"/>
 
-                        <TextBlock Text="ID"/>
+                        </DataGrid.Columns>
 
-                        <TextBox Grid.Row="0"                
-                             Margin="70,0,0,5"/>
-
-                        <TextBlock Grid.Row="1"         
-                               Text="Type"/>
-
-                        <TextBox Grid.Row="1"        
-                             Margin="70,0,0,5"/>
-
-                        <TextBlock Grid.Row="2"         
-                               Text="State"/>
-
-                        <TextBox Grid.Row="2"             
-                             Margin="70,0,0,5"/>
-
-                        <TextBlock Grid.Row="3"             
-                               Text="Carrier"/>
-
-                        <TextBox Grid.Row="3"               
-                             Margin="70,0,0,5"/>
-
-                    </Grid>
+                    </DataGrid>
 
                 </GroupBox>
 

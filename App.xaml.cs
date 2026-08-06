@@ -9,9 +9,14 @@ namespace MaterialControlSimulator
     /// </summary>
     public partial class App : Application
     {
-        public static NodeRegistry Nodes { get; private set; } = new NodeRegistry();
+        public static NodeRegistry Nodes { get; } = new();
 
         public static CarrierRegistry Carriers { get; } = new();
+
+        public App()
+        {
+            InitializeComponent();
+        }
     }
 
 }

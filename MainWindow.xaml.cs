@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using MaterialControlSimulator.Controls;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,14 +22,19 @@ namespace MaterialControlSimulator
     {
         SimulationManager _simulation = new(new CarrierManager()); 
         private LayoutManager _layoutManager;
+        public ObservableCollection<PropertyItem> Properties { get; } = new();
+
         public MainWindow()
         {
             InitializeComponent();
 
             _layoutManager = new LayoutManager();
             _layoutManager.LoadComplete += LayoutManager_LoadComplete;
+            PropertyGrid.ItemsSource = Properties;
 
-            Loaded += MainWindow_Loaded;
+            DataContext = new MainViewModel();
+
+            Loaded += MainWindow_Loaded; 
 
             Logger.MessageReceived += Logger_MessageReceived;
         }
@@ -93,6 +100,47 @@ namespace MaterialControlSimulator
 
 
                 DebugOutput.ScrollToEnd();
+            });
+        }
+
+        public void ShowProperties(NodeControl node)
+        {
+            Properties.Clear();
+
+
+            Properties.Add(new PropertyItem
+            {
+                Name = "ID",
+                Value = node.Id
+            });
+
+
+            Properties.Add(new PropertyItem
+            {
+                Name = "Type",
+                Value = node.GetType().Name
+            });
+
+
+            var pos = node.GetPosition();
+
+            Properties.Add(new PropertyItem
+            {
+                Name = "Position",
+                Value = $"{pos.X:F0}, {pos.Y:F0}"
+            });
+
+
+            Properties.Add(new PropertyItem
+            {
+                Name = "State",
+                Value = "Ready"
+            });
+
+            Properties.Add(new PropertyItem
+            {
+                Name = "Carrier ID",
+                Value = node.Carrier?.Id ?? "None"
             });
         }
     }
