@@ -11,44 +11,24 @@ namespace MaterialControlSimulator
 {
     public class CarrierManager
     {
-        public async Task ExecuteAsync(
-            MoveCommand command)
+        private readonly Dictionary<string, CarrierSession> _sessions = new();
+
+
+        public IEnumerable<CarrierSession> Sessions
+            => _sessions.Values;
+
+
+        public void Register(CarrierControl carrier)
         {
-            var carrier =
-                App.Carriers.Get(command.CarrierId);
-
-
-            var targetNode =
-                App.Nodes.Get(command.DestinationId);
-
-
-            // 목적지가 이미 사용 중인지 확인
-            if (!targetNode.Enter(carrier))
-            {
-                Logger.Info($"Node 사용중 : {targetNode.Id}");
-
+            if (_sessions.ContainsKey(carrier.Id))
                 return;
-            }
 
+            _sessions.Add(carrier.Id, new CarrierSession(carrier));
+        }
 
-            // 기존 위치 저장
-            var oldNode = carrier.CurrentNode;
-
-
-            // 이동
-            await carrier.MoveToAsync(
-                targetNode.GetPosition(),
-                command.Speed);
-
-
-            // 기존 위치 해제
-            oldNode?.Leave();
-
-
-            // 현재 위치 갱신
-            carrier.CurrentNode = targetNode;
-
-            Logger.Info($"Carrier[{carrier.Id}] 이동 : {targetNode.Id} ");
+        public CarrierSession Get(string carrierId)
+        {
+            return _sessions[carrierId];
         }
     }
 }

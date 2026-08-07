@@ -12,6 +12,7 @@ namespace MaterialControlSimulator
         public static NodeRegistry Nodes { get; } = new();
 
         public static CarrierRegistry Carriers { get; } = new();
+        public static CarrierManager CarrierManager { get; } = new();
 
         public App()
         {

@@ -9,10 +9,11 @@ namespace MaterialControlSimulator
 {
     public class MoveCommand
     {
-        public string CarrierId { get; set; }
+        public NodeControl Destination { get; }
 
-        public string DestinationId { get; set; }
-
-        public double Speed { get; set; } = 200;
+        public MoveCommand(NodeControl destination)
+        {
+            Destination = destination;
+        }
     }
 }

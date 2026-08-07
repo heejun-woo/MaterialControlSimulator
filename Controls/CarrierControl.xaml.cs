@@ -33,7 +33,7 @@ namespace MaterialControlSimulator.Controls
             set => SetValue(IdProperty, value);
         }
 
-        public INode? CurrentNode { get; set; }
+        public NodeControl? CurrentNode { get; set; }
 
         public CarrierControl()
         {
@@ -44,9 +44,10 @@ namespace MaterialControlSimulator.Controls
         private void CarrierControl_Loaded(object sender, RoutedEventArgs e)
         {
             App.Carriers.Register(this);
+            App.CarrierManager.Register(this);
         }
 
-        public async Task MoveToAsync(Point target, double speed)
+        public async Task MoveToAsync(Point target, double speed = 200)
         {
             Point current = GetCurrentPosition();
 
@@ -80,7 +81,7 @@ namespace MaterialControlSimulator.Controls
         }
 
 
-        private Task AnimateAsync(Point from, Point to, TimeSpan duration)
+        public Task AnimateAsync(Point from, Point to, TimeSpan duration)
         {
             var tcs = new TaskCompletionSource<bool>();
 

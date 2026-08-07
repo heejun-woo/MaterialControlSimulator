@@ -1,59 +1,90 @@
-﻿using System;
+﻿using MaterialControlSimulator.Controls;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MaterialControlSimulator.Controls;
 
 namespace MaterialControlSimulator
 {
     public class SimulationManager
     {
         private readonly CarrierManager _carrierManager;
-
-        private readonly Dictionary<string, Queue<MoveCommand>> _queues = new();
-
+        private readonly NodeRegistry _nodeRegistry;
+        public bool _running = false;
 
         public SimulationManager(
-            CarrierManager carrierManager)
+            CarrierManager carrierManager,
+            NodeRegistry nodeRegistry)
         {
             _carrierManager = carrierManager;
+            _nodeRegistry = nodeRegistry;
+        }
+
+        private async Task StartCarrier(CarrierSession session)
+        {
+            while (_running)
+            {
+                var nextNode = session.Route.GetNextNode(session.CurrentNode);
+
+
+                if (nextNode == null)
+                {
+                    await Task.Delay(100);
+                    continue;
+                }
+
+
+                var command = new MoveCommand(nextNode);
+                session.Queue.Enqueue(command);
+
+                if (!session.Running)
+                {
+                    _ = Run(session);
+                }
+
+                session.Carrier.CurrentNode = nextNode;
+
+                await Task.Delay(100);
+            }
         }
 
 
-        public void Enqueue(
-            MoveCommand command)
+        public async Task Start(Route route)
         {
-            if (!_queues.ContainsKey(command.CarrierId))
+            foreach (var session in App.CarrierManager.Sessions)
             {
-                _queues[command.CarrierId] = new();
+                session.Route = route;
+
+                _ = StartCarrier(session);
+            }
+        }
+
+
+        private async Task Run(CarrierSession session)
+        {
+            session.Running = true;
+
+            while (true)
+            {
+                if (session.Queue.Count == 0)
+                {
+                    break;
+                }
+
+                var command = session.Queue.Dequeue();
+
+                var pos = command.Destination.GetPosition();
+
+                await session.Carrier.MoveToAsync(pos);
+
+                Logger.Info(
+                    $"{session.Carrier.Id} → {command.Destination.Id}");
             }
 
-            _queues[command.CarrierId].Enqueue(command);
-        }
-
-
-        public async Task StartAsync()
-        {
-            var tasks = _queues.Keys
-                .Select(RunCarrierAsync);
-
-            await Task.WhenAll(tasks);
-        }
-
-
-        private async Task RunCarrierAsync(
-            string carrierId)
-        {
-            var queue = _queues[carrierId];
-
-
-            while (queue.Count > 0)
-            {
-                var command = queue.Dequeue();
-
-                await _carrierManager.ExecuteAsync(command);
-            }
+            session.Running = false;
         }
     }
 }

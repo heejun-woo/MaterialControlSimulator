@@ -1,5 +1,6 @@
 ﻿using MaterialControlSimulator.Controls;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Diagnostics;
 using System.Text;
 using System.Windows;
@@ -20,7 +21,7 @@ namespace MaterialControlSimulator
     /// </summary>
     public partial class MainWindow : Window
     {
-        SimulationManager _simulation = new(new CarrierManager()); 
+        SimulationManager _simulation = new(App.CarrierManager, App.Nodes); 
         private LayoutManager _layoutManager;
         public ObservableCollection<PropertyItem> Properties { get; } = new();
 
@@ -50,45 +51,10 @@ namespace MaterialControlSimulator
                 System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
-        private async void LayoutManager_LoadComplete()
+        private void LayoutManager_LoadComplete()
         {
             Logger.Info("Layout Load Complete");
 
-
-            _simulation = new SimulationManager(
-                new CarrierManager());
-
-
-            _simulation.Enqueue(new MoveCommand
-            {
-                CarrierId = "C01",
-                DestinationId = "Port01",
-                Speed = 200
-            });
-
-
-            _simulation.Enqueue(new MoveCommand
-            {
-                CarrierId = "C01",
-                DestinationId = "Port02",
-                Speed = 200
-            });
-
-            _simulation.Enqueue(new MoveCommand
-            {
-                CarrierId = "C01",
-                DestinationId = "Port03",
-                Speed = 200
-            });
-
-            _simulation.Enqueue(new MoveCommand
-            {
-                CarrierId = "C01",
-                DestinationId = "Port04",
-                Speed = 200
-            });
-
-            await _simulation.StartAsync();
         }
 
         private void Logger_MessageReceived(string message)
@@ -142,6 +108,36 @@ namespace MaterialControlSimulator
                 Name = "Carrier ID",
                 Value = node.Carrier?.Id ?? "None"
             });
+        }
+
+
+        private async void Start_Click(object sender, RoutedEventArgs e)
+        {
+
+            var route = new Route
+            {
+                Loop = true
+            };
+
+            route.Nodes.Add(Port01);
+            route.Nodes.Add(Port02);
+            route.Nodes.Add(Port03);
+            route.Nodes.Add(Port04);
+            route.Nodes.Add(Port05);
+            route.Nodes.Add(Port06);
+            route.Nodes.Add(Port07);
+            route.Nodes.Add(Port08);
+            route.Nodes.Add(Port09);
+            route.Nodes.Add(Port10);
+            route.Nodes.Add(Port11);
+            route.Nodes.Add(Port12);
+
+
+            Carrier01.CurrentNode = Port01;
+
+            _simulation._running = true;
+
+            await _simulation.Start(route);
         }
     }
 }
