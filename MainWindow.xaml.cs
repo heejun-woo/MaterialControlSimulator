@@ -13,6 +13,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Xml.Linq;
 
 namespace MaterialControlSimulator
 {
@@ -21,7 +22,7 @@ namespace MaterialControlSimulator
     /// </summary>
     public partial class MainWindow : Window
     {
-        SimulationManager _simulation = new(App.CarrierManager, App.Nodes); 
+        SimulationManager _simulation; 
         private LayoutManager _layoutManager;
         public ObservableCollection<PropertyItem> Properties { get; } = new();
 
@@ -53,7 +54,25 @@ namespace MaterialControlSimulator
 
         private void LayoutManager_LoadComplete()
         {
+
+            Port01.Connect(Port02);
+            Port02.Connect(Port03);
+            Port03.Connect(Port04);
+            Port04.Connect(Port05);
+            Port05.Connect(Port06);
+            Port06.Connect(Port07);
+            Port07.Connect(Port08);
+            Port08.Connect(Port09);
+            Port09.Connect(Port10);
+            Port10.Connect(Port11);
+            Port11.Connect(Port12);
+            Port12.Connect(Port01);
+
             Logger.Info("Layout Load Complete");
+            _simulation = new(App.CarrierManager, App.Nodes);
+
+            Carrier01.SetPosition(Port01);
+            _simulation.SetDestination(App.CarrierManager.Get("C01"), Port06);
 
         }
 
@@ -113,31 +132,42 @@ namespace MaterialControlSimulator
 
         private async void Start_Click(object sender, RoutedEventArgs e)
         {
-
-            var route = new Route
-            {
-                Loop = true
-            };
-
-            route.Nodes.Add(Port01);
-            route.Nodes.Add(Port02);
-            route.Nodes.Add(Port03);
-            route.Nodes.Add(Port04);
-            route.Nodes.Add(Port05);
-            route.Nodes.Add(Port06);
-            route.Nodes.Add(Port07);
-            route.Nodes.Add(Port08);
-            route.Nodes.Add(Port09);
-            route.Nodes.Add(Port10);
-            route.Nodes.Add(Port11);
-            route.Nodes.Add(Port12);
-
-
-            Carrier01.CurrentNode = Port01;
-
             _simulation._running = true;
 
-            await _simulation.Start(route);
+            await _simulation.Start();
+        }
+
+        private async void Pause_Click(object sender, RoutedEventArgs e)
+        {
+            _simulation._running = false;
+
+        }
+        private void CreateCarrier_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CarrierCreateWindow
+            {
+                Owner = this
+            };
+
+            if (window.ShowDialog() != true)
+                return;
+
+            if (window.CreatedCarrier == null)
+                return;
+
+            SimulationCanvas.Children.Add(
+                window.CreatedCarrier);
+
+        }
+        private async void SetCarrierDestination_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CarrierDestinationWindow(_simulation)
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+
         }
     }
 }

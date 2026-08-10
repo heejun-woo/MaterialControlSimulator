@@ -12,14 +12,17 @@ namespace MaterialControlSimulator
     {
         private readonly Dictionary<string, NodeControl> _nodes = new();
 
-
         public ObservableCollection<NodeControl> NodeList { get; }
             = new();
 
+        public IEnumerable<NodeControl> Nodes => _nodes.Values;
 
         public int Count => _nodes.Count;
 
-
+        public IEnumerable<NodeControl> GetAll()
+        {
+            return _nodes.Values;
+        }
         public void Register(NodeControl node)
         {
             if (string.IsNullOrEmpty(node.Id))

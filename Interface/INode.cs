@@ -19,7 +19,7 @@ namespace MaterialControlSimulator
         CarrierControl? Carrier { get; }
 
 
-        bool Enter(CarrierControl carrier);
+        bool TryEnter(CarrierControl carrier);
 
         void Leave();
     }

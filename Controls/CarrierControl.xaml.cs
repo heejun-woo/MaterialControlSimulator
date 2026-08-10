@@ -137,5 +137,24 @@ namespace MaterialControlSimulator.Controls
 
             return tcs.Task;
         }
+
+        public void SetPosition(NodeControl node)
+        {
+            CurrentNode = node;
+            var nodeX = Canvas.GetLeft(node);
+            var nodeY = Canvas.GetTop(node);
+
+            if (double.IsNaN(nodeX))
+                nodeX = 0;
+
+            if (double.IsNaN(nodeY))
+                nodeY = 0;
+
+            var x = nodeX + (node.ActualWidth - ActualWidth) / 2;
+            var y = nodeY + (node.ActualHeight - ActualHeight) / 2;
+
+            Canvas.SetLeft(this, x);
+            Canvas.SetTop(this, y);
+        }
     }
 }

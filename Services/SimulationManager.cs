@@ -14,77 +14,96 @@ namespace MaterialControlSimulator
         private readonly CarrierManager _carrierManager;
         private readonly NodeRegistry _nodeRegistry;
         public bool _running = false;
+        public Router _router;
 
-        public SimulationManager(
-            CarrierManager carrierManager,
-            NodeRegistry nodeRegistry)
+        public SimulationManager(CarrierManager carrierManager, NodeRegistry nodeRegistry)
         {
             _carrierManager = carrierManager;
             _nodeRegistry = nodeRegistry;
+
+            _router = new Router();
         }
 
-        private async Task StartCarrier(CarrierSession session)
+        public void SetDestination(CarrierSession session, NodeControl destination)
         {
-            while (_running)
+            session.Destination = destination;
+
+            session.Route = _router.FindRoute(session.Carrier.CurrentNode, destination);
+
+            if (session.Route == null)
             {
-                var nextNode = session.Route.GetNextNode(session.CurrentNode);
-
-
-                if (nextNode == null)
-                {
-                    await Task.Delay(100);
-                    continue;
-                }
-
-
-                var command = new MoveCommand(nextNode);
-                session.Queue.Enqueue(command);
-
-                if (!session.Running)
-                {
-                    _ = Run(session);
-                }
-
-                session.Carrier.CurrentNode = nextNode;
-
-                await Task.Delay(100);
+                Logger.Write(
+                    $"[{session.Carrier.Id}] 경로를 찾을 수 없습니다.");
+                return;
             }
+
+            session.RouteIndex = 0;
         }
-
-
-        public async Task Start(Route route)
+        public async Task Start()
         {
             foreach (var session in App.CarrierManager.Sessions)
             {
-                session.Route = route;
+                if (session.Route == null)
+                    continue;
+                if (session.IsRunning) continue;
 
                 _ = StartCarrier(session);
             }
         }
 
-
-        private async Task Run(CarrierSession session)
+        public void Pause()
         {
-            session.Running = true;
-
-            while (true)
-            {
-                if (session.Queue.Count == 0)
-                {
-                    break;
-                }
-
-                var command = session.Queue.Dequeue();
-
-                var pos = command.Destination.GetPosition();
-
-                await session.Carrier.MoveToAsync(pos);
-
-                Logger.Info(
-                    $"{session.Carrier.Id} → {command.Destination.Id}");
-            }
-
-            session.Running = false;
+            if (!_running)
+                return;
+            _running = false;
         }
+
+        private async Task StartCarrier(CarrierSession session)
+        {
+            try
+            {
+                while (session.Route != null)
+                {
+                    if (_running == false) return;
+                    session.IsRunning = true;
+
+                    var nextIndex = session.RouteIndex + 1;
+
+                    if (nextIndex >= session.Route.Nodes.Count)
+                        break;
+
+                    var nextNode = session.Route.Nodes[nextIndex];
+
+                    if(nextNode.TryEnter(session.Carrier) == false)
+                    {
+                        Logger.Write($"[{session.Carrier.Id}] {nextNode.Id}에 진입할 수 없습니다.");
+                        break;
+                    }
+
+                    var command = new MoveCommand(nextNode);
+
+                    await Execute(session.Carrier, command);
+
+                    session.Carrier.CurrentNode?.Leave();
+                    session.Carrier.CurrentNode = nextNode; 
+                    session.RouteIndex = nextIndex;
+                }
+            }
+            finally
+            {
+                session.IsRunning = false;
+            }
+        }
+
+
+        private async Task Execute(CarrierControl Carrier, MoveCommand command)
+        {
+            var pos = command.Destination.GetPosition();
+
+            await Carrier.MoveToAsync(pos);
+
+            Logger.Info($"{Carrier.Id} → {command.Destination.Id}");
+        }
+
     }
 }

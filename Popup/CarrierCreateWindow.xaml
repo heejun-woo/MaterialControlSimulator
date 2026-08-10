@@ -1,0 +1,75 @@
+﻿<Window x:Class="MaterialControlSimulator.CarrierCreateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MaterialControlSimulator"
+        mc:Ignorable="d"
+        Title="Carrier 생성"
+        Width="320"
+        Height="220"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="80"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock
+            Grid.Row="0"
+            Grid.Column="0"
+            Text="Carrier ID"
+            VerticalAlignment="Center"/>
+
+        <TextBox
+            x:Name="CarrierIdTextBox"
+            Grid.Row="0"
+            Grid.Column="1"
+            Margin="5"/>
+
+        <TextBlock
+            Grid.Row="1"
+            Grid.Column="0"
+            Text="초기위치"
+            VerticalAlignment="Center"/>
+
+        <ComboBox
+            x:Name="InitialNodeComboBox"
+            Grid.Row="1"
+            Grid.Column="1"
+            Margin="5"
+            DisplayMemberPath="DisplayName"
+            IsEditable="True"
+            IsReadOnly="True">
+        </ComboBox>
+        
+        <StackPanel
+            Grid.Row="3"
+            Grid.ColumnSpan="2"
+            Orientation="Horizontal"
+            HorizontalAlignment="Right">
+
+            <Button
+                Content="생성"
+                Width="70"
+                Margin="5"
+                Click="CreateButton_Click"/>
+
+            <Button
+                Content="취소"
+                Width="70"
+                Margin="5"
+                Click="CancelButton_Click"/>
+
+        </StackPanel>
+    </Grid>
+</Window>

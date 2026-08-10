@@ -11,17 +11,17 @@ namespace MaterialControlSimulator
     {
         public CarrierControl Carrier { get; }
 
-        public Queue<MoveCommand> Queue { get; } = new();
+        public NodeControl? Destination { get; set; }
 
         public Route? Route { get; set; }
-
-        public bool Running { get; set; }
-        public NodeControl? CurrentNode => Carrier.CurrentNode;
 
         public CarrierSession(CarrierControl carrier)
         {
             Carrier = carrier;
         }
+        public int RouteIndex { get; set; } = 0;
+
+        public bool IsRunning { get; set; }
     }
 
 

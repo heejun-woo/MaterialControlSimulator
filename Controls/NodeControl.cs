@@ -24,12 +24,28 @@ namespace MaterialControlSimulator.Controls
             get => (string)GetValue(IdProperty);
             set => SetValue(IdProperty, value);
         }
+        public string DisplayName => Id;
+
+        public List<NodeControl> ConnectedNodes { get; } = new();
+        public List<NodeControl> ReverseConnectedNodes { get; } = new();
+
         public NodeControl()
         {
 
             MouseDown += NodeControl_MouseDown;
 
             Loaded += NodeControl_Loaded;
+        }
+        public void Connect(NodeControl node)
+        {
+            if (node == this)
+                return;
+
+            if (!ConnectedNodes.Contains(node))
+                ConnectedNodes.Add(node);
+
+            if (!node.ReverseConnectedNodes.Contains(this))
+                node.ReverseConnectedNodes.Add(this);
         }
 
         private void NodeControl_MouseDown(object sender, MouseButtonEventArgs e)
@@ -41,11 +57,10 @@ namespace MaterialControlSimulator.Controls
             }
         }
 
-        private void NodeControl_Loaded(
-            object sender,
-            RoutedEventArgs e)
+        private void NodeControl_Loaded(object sender, RoutedEventArgs e)
         {
             App.Nodes.Register(this);
+            App.NodeManager.Add(this);
         }
 
         public CarrierControl? Carrier { get; private set; }
@@ -55,13 +70,12 @@ namespace MaterialControlSimulator.Controls
             Carrier != null;
 
 
-        public bool Enter(CarrierControl carrier)
+        public bool TryEnter(CarrierControl carrier)
         {
-            if (IsOccupied)
+            if (Carrier != null)
                 return false;
 
             Carrier = carrier;
-
             return true;
         }
 
@@ -91,5 +105,6 @@ namespace MaterialControlSimulator.Controls
                 x + width / 2,
                 y + height / 2);
         }
+
     }
 }

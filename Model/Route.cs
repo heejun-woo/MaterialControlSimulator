@@ -9,29 +9,13 @@ namespace MaterialControlSimulator
 {
     public class Route
     {
-        public List<NodeControl> Nodes { get; set; }
-         = new();
-        public bool Loop { get; set; }
+        public List<NodeControl> Nodes { get; } = new();
 
-        public NodeControl? GetNextNode(NodeControl currentNode)
-        {
-            var index = Nodes.IndexOf(currentNode);
+        public int CurrentIndex { get; set; }
 
-            if (index < 0)
-                return null;
-
-
-            // 마지막 노드인 경우
-            if (index == Nodes.Count - 1)
-            {
-                if (Loop)
-                    return Nodes[0];
-
-                return null;
-            }
-
-
-            return Nodes[index + 1];
-        }
+        public NodeControl? CurrentNode =>
+            CurrentIndex < Nodes.Count
+                ? Nodes[CurrentIndex]
+                : null;
     }
 }

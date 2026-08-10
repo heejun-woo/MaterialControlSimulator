@@ -26,13 +26,15 @@
             <ToolBar>
 
                 <Button Content="▶ Start" Click="Start_Click"/>
-                <Button Content="■ Stop"/>
-                <Button Content="⏸ Pause"/>
+                <Button Content="⏸ Pause" Click="Pause_Click"/>
 
                 <Separator/>
 
                 <Button Content="+"/>
                 <Button Content="-"/>
+
+                <Button Content="Carrier 생성" Click="CreateCarrier_Click"/>
+                <Button Content="Carrier 목적지 지정" Click="SetCarrierDestination_Click"/>
 
             </ToolBar>
         </ToolBarTray>
