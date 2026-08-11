@@ -30,6 +30,10 @@ namespace MaterialControlSimulator
         {
             return _sessions[carrierId];
         }
+        public CarrierControl GetCarrierControl(string carrierId)
+        {
+            return _sessions[carrierId].Carrier;
+        }
 
         public bool ContainKey(string carrierId)
         {

@@ -1,5 +1,7 @@
-﻿using System;
+﻿using MaterialControlSimulator.Plc;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -13,11 +15,12 @@ namespace MaterialControlSimulator.Controls
 
     public class NodeControl : UserControl, INode
     {
+        #region 그외
         public static readonly DependencyProperty IdProperty =
-            DependencyProperty.Register(
-                nameof(Id),
-                typeof(string),
-                typeof(NodeControl));
+    DependencyProperty.Register(
+        nameof(Id),
+        typeof(string),
+        typeof(NodeControl));
 
         public string Id
         {
@@ -28,6 +31,7 @@ namespace MaterialControlSimulator.Controls
 
         public List<NodeControl> ConnectedNodes { get; } = new();
         public List<NodeControl> ReverseConnectedNodes { get; } = new();
+
 
         public NodeControl()
         {
@@ -64,7 +68,6 @@ namespace MaterialControlSimulator.Controls
         }
 
         public CarrierControl? Carrier { get; private set; }
-
 
         public bool IsOccupied =>
             Carrier != null;
@@ -122,5 +125,39 @@ namespace MaterialControlSimulator.Controls
                 SelectionChanged?.Invoke(value);
             }
         }
+        #endregion
+
+        #region PLC 관련 속성
+        public ObservableCollection<PlcBinding> PlcBindings { get; } = new();
+
+        public string CarrierID
+        {
+            get => Carrier.Id;
+            set
+            {
+                CarrierID = value;
+
+                if (!App.CarrierManager.ContainKey(value))
+                {
+                    CarrierControl CreatedCarrier = new CarrierControl
+                    {
+                        Id = value
+                    };
+
+                    TryEnter(CreatedCarrier);
+                    CreatedCarrier.SetPosition(this);
+
+                    App.CarrierManager.Register(CreatedCarrier);
+                }
+                else
+                {
+                    TryEnter(App.CarrierManager.GetCarrierControl(value));
+                }
+
+            }
+        }
+        public bool IsExist  { get; set; }
+  
+        #endregion
     }
 }

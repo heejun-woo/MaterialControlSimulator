@@ -1,4 +1,5 @@
 ﻿using MaterialControlSimulator.Controls;
+using MaterialControlSimulator.Plc;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics;
@@ -24,12 +25,15 @@ namespace MaterialControlSimulator
     public partial class MainWindow : Window
     {
         SimulationManager _simulation; 
-        private LayoutManager _layoutManager;
+        private LayoutManager _layoutManager; 
+
         public ObservableCollection<PropertyItem> Properties { get; } = new();
 
         public MainWindow()
         {
             InitializeComponent();
+
+            PlcStart(5000);
 
             _layoutManager = new LayoutManager();
             _layoutManager.LoadComplete += LayoutManager_LoadComplete;
@@ -43,6 +47,12 @@ namespace MaterialControlSimulator
         }
 
         #region 초기화 관련
+        
+        private async void PlcStart(int PortID)
+        {
+            await App.PlcServer.StartAsync(PortID);
+        }
+        
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // 컨트롤 Loaded 완료 이후 실행
@@ -56,7 +66,6 @@ namespace MaterialControlSimulator
 
         private void LayoutManager_LoadComplete()
         {
-
             Loc01.Connect(Loc02);
             Loc02.Connect(Loc03);
             Loc03.Connect(Loc04);
@@ -75,6 +84,8 @@ namespace MaterialControlSimulator
 
             Port02.Connect(Loc07);
             Loc07.Connect(Port02);
+
+            SetPlcAddress();
 
             Logger.Info("Layout Load Complete");
             _simulation = new(App.CarrierManager, App.Nodes);
@@ -142,6 +153,7 @@ namespace MaterialControlSimulator
         #region 메뉴 이벤트
         private async void Start_Click(object sender, RoutedEventArgs e)
         {
+
             _simulation._running = true;
 
             await _simulation.Start();
@@ -193,11 +205,18 @@ namespace MaterialControlSimulator
         private void ZoomIn(object sender, RoutedEventArgs e)
         {
             SetZoom(_zoom + 0.1);
+            App.PlcBindingManager.SetValue("B100", true);
+
+            Logger.Info(App.PlcBindingManager.GetValue("B100").ToString());
         }
 
         private void ZoomOut(object sender, RoutedEventArgs e)
         {
             SetZoom(_zoom - 0.1);
+
+            App.PlcBindingManager.SetValue("B100", false);
+
+            Logger.Info(App.PlcBindingManager.GetValue("B100").ToString());
         }
 
         private void ZoomReset(object sender, RoutedEventArgs e)
@@ -278,5 +297,28 @@ namespace MaterialControlSimulator
             node.BringIntoView();
         } 
         #endregion
+
+
+        private void SetPlcAddress()
+        {
+            Port01.PlcBindings.Add(new PlcBinding
+            {
+                PropertyName = "CarrierID",
+                Address = "W3800",
+                DataType = PlcDataType.String,
+                WordCount = 16
+            });
+
+            Port01.PlcBindings.Add(new PlcBinding
+            {
+                PropertyName = "IsExist",
+                Address = "B100",
+                DataType = PlcDataType.Bool
+            });
+
+            
+            Debug.WriteLine(App.PlcBindingManager.GetValue("B100"));
+        }
+
     }
 }
