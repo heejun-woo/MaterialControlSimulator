@@ -14,10 +14,25 @@
             BorderBrush="#7667D8"
             BorderThickness="2">
 
+            <Border.Style>
+
+                <Style TargetType="Border">
+
+                    <Setter Property="BorderBrush"
+                        Value="#53606C"/>
+
+                    <Setter Property="BorderThickness"
+                        Value="2"/>
+
+
+                </Style>
+
+            </Border.Style>
+
             <Grid>
 
                 <!-- 내부 위치 영역 -->
-                <Border
+                <Border x:Name="NodeBorder"
                     Margin="12"
                     Background="#171820"
                     BorderBrush="#7667D8"

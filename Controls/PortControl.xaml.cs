@@ -25,6 +25,19 @@ namespace MaterialControlSimulator.Controls
         public PortControl()
         {
             InitializeComponent();
+            SelectionChanged += OnSelectionChanged;
+        }
+
+        private void OnSelectionChanged(bool selected)
+        {
+            NodeBorder.BorderBrush = selected
+                ? Brushes.Cyan
+                : new SolidColorBrush(Color.FromRgb(83, 96, 108));
+
+            NodeBorder.BorderThickness =
+                selected
+                    ? new Thickness(3)
+                    : new Thickness(2);
         }
     }
 }

@@ -86,23 +86,20 @@
                              Margin="5"               
                              Height="28"/>
 
-                        <TreeView Margin="5"  
-                                  Name="EquipmentTree"
-                                  ItemsSource="{Binding Nodes}">
-                            
+                        <TreeView x:Name="EquipmentTree"
+                              SelectedItemChanged="EquipmentTree_SelectedItemChanged"
+                              Background="Transparent"
+                              BorderThickness="0">
+
                             <TreeView.ItemTemplate>
 
-                                <HierarchicalDataTemplate>
+                                <HierarchicalDataTemplate
+                                        ItemsSource="{Binding Items}">
 
-                                    <StackPanel Orientation="Horizontal">
-
-                                        <TextBlock Text="{Binding Id}"/>
-
-                                        <TextBlock Text="  "/>
-
-                                        <TextBlock Text="{Binding Type}"/>
-
-                                    </StackPanel>
+                                    <TextBlock
+                                        Text="{Binding Name}"
+                                        Foreground="White"
+                                        FontWeight="Bold"/>
 
                                 </HierarchicalDataTemplate>
 

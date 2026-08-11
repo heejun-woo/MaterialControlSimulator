@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Xml.Linq;
+using WpfApp;
 
 namespace MaterialControlSimulator
 {
@@ -41,6 +42,7 @@ namespace MaterialControlSimulator
             Logger.MessageReceived += Logger_MessageReceived;
         }
 
+        #region 초기화 관련
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // 컨트롤 Loaded 완료 이후 실행
@@ -76,6 +78,7 @@ namespace MaterialControlSimulator
 
             Logger.Info("Layout Load Complete");
             _simulation = new(App.CarrierManager, App.Nodes);
+            RefreshEquipmentTree();
 
             Carrier01.SetPosition(Port01);
             _simulation.SetDestination(App.CarrierManager.Get("C01"), Loc06);
@@ -92,7 +95,8 @@ namespace MaterialControlSimulator
 
                 DebugOutput.ScrollToEnd();
             });
-        }
+        } 
+        #endregion
 
         public void ShowProperties(NodeControl node)
         {
@@ -136,6 +140,7 @@ namespace MaterialControlSimulator
         }
 
 
+        #region 메뉴 이벤트
         private async void Start_Click(object sender, RoutedEventArgs e)
         {
             _simulation._running = true;
@@ -174,6 +179,80 @@ namespace MaterialControlSimulator
 
             window.ShowDialog();
 
+        } 
+        #endregion
+
+        #region TreeView 이벤트
+        private void RefreshEquipmentTree()
+        {
+            var groups = new ObservableCollection<EquipmentGroup>();
+
+            var locations = new EquipmentGroup
+            {
+                Name = "Location"
+            };
+
+            var ports = new EquipmentGroup
+            {
+                Name = "Port"
+            };
+
+            foreach (var node in App.Nodes.GetAll())
+            {
+                if (node is LocationControl)
+                {
+                    locations.Items.Add(node);
+                }
+                else if (node is PortControl)
+                {
+                    ports.Items.Add(node);
+                }
+            }
+
+            if (locations.Items.Count > 0)
+                groups.Add(locations);
+
+            if (ports.Items.Count > 0)
+                groups.Add(ports);
+
+            EquipmentTree.ItemsSource = groups;
         }
+
+        private NodeControl? _selectedNode;
+
+        private void EquipmentTree_SelectedItemChanged(
+            object sender,
+            RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (e.NewValue is not NodeControl node)
+                return;
+
+            // 기존 선택 해제
+            if (_selectedNode != null)
+                _selectedNode.IsSelected = false;
+
+            // 새 노드 선택
+            _selectedNode = node;
+            _selectedNode.IsSelected = true;
+
+            // 화면에서 해당 노드로 이동
+            MoveToNode(node);
+
+            ShowProperties(node);
+        }
+        private void MoveToNode(NodeControl node)
+        {
+            var x = Canvas.GetLeft(node);
+            var y = Canvas.GetTop(node);
+
+            if (double.IsNaN(x))
+                x = 0;
+
+            if (double.IsNaN(y))
+                y = 0;
+
+            node.BringIntoView();
+        } 
+        #endregion
     }
 }

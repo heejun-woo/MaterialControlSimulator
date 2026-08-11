@@ -6,11 +6,25 @@
     <Grid>
 
         <!-- 외곽 -->
-        <Border
+        <Border x:Name="NodeBorder"
             CornerRadius="8"
             Background="#202830"
             BorderBrush="#00B8D4"
             BorderThickness="2">
+
+            <Border.Style>
+
+                <Style TargetType="Border">
+
+                    <Setter Property="BorderBrush"
+                        Value="#53606C"/>
+
+                    <Setter Property="BorderThickness"
+                        Value="2"/>
+
+                </Style>
+
+            </Border.Style>
 
             <Grid>
 

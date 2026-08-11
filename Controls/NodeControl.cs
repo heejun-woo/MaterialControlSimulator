@@ -106,5 +106,21 @@ namespace MaterialControlSimulator.Controls
                 y + height / 2);
         }
 
+        public event Action<bool>? SelectionChanged;
+
+        private bool _isSelected;
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected == value)
+                    return;
+
+                _isSelected = value;
+                SelectionChanged?.Invoke(value);
+            }
+        }
     }
 }
