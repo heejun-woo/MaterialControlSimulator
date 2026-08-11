@@ -30,9 +30,12 @@
 
                 <Separator/>
 
-                <Button Content="+"/>
-                <Button Content="-"/>
-
+                <Button Content="ReSet" Click="ZoomReset"/>
+                <Button Content="+" Click="ZoomIn"/>
+                <Button Content="-" Click="ZoomOut"/>
+                
+                <Separator/>
+                
                 <Button Content="Carrier 생성" Click="CreateCarrier_Click"/>
                 <Button Content="Carrier 목적지 지정" Click="SetCarrierDestination_Click"/>
 
@@ -116,15 +119,21 @@
                       Grid.Column="1"         
                       Margin="5">
 
-                    <ScrollViewer        
-                    HorizontalScrollBarVisibility="Auto"        
-                    VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer x:Name="SimulationScrollViewer"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
 
                         <Canvas x:Name="SimulationCanvas"               
                             Width="3000"              
                             Height="3000"                
                             Background="#2B2B2B">
-
+                            
+                            <Canvas.LayoutTransform>
+                                <ScaleTransform x:Name="SimulationScale"
+                                    ScaleX="1"
+                                    ScaleY="1"/>
+                            </Canvas.LayoutTransform>
+                            
                             <local:PortControl           
                                 x:Name="Port01"                
                                 Id="Port01"               

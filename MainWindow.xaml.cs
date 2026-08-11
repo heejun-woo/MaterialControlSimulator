@@ -139,7 +139,6 @@ namespace MaterialControlSimulator
             });
         }
 
-
         #region 메뉴 이벤트
         private async void Start_Click(object sender, RoutedEventArgs e)
         {
@@ -179,7 +178,32 @@ namespace MaterialControlSimulator
 
             window.ShowDialog();
 
-        } 
+        }
+
+        private double _zoom = 1.0;
+
+        private void SetZoom(double zoom)
+        {
+            _zoom = Math.Clamp(zoom, 0.3, 3.0);
+
+            SimulationScale.ScaleX = _zoom;
+            SimulationScale.ScaleY = _zoom;
+        }
+
+        private void ZoomIn(object sender, RoutedEventArgs e)
+        {
+            SetZoom(_zoom + 0.1);
+        }
+
+        private void ZoomOut(object sender, RoutedEventArgs e)
+        {
+            SetZoom(_zoom - 0.1);
+        }
+
+        private void ZoomReset(object sender, RoutedEventArgs e)
+        {
+            SetZoom(1.0);
+        }
         #endregion
 
         #region TreeView 이벤트
