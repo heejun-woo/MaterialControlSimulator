@@ -131,76 +131,86 @@
                             <local:PortControl           
                                 x:Name="Port01"                
                                 Id="Port01"               
+                                Canvas.Left="110"       
+                                Canvas.Top="120"/>
+
+                            <local:PortControl           
+                                x:Name="Port02"                
+                                Id="Port02"               
+                                Canvas.Left="590"       
+                                Canvas.Top="500"/>
+
+                            <local:LocationControl           
+                                x:Name="Loc01"                
+                                Id="Loc01"               
                                 Canvas.Left="100"       
                                 Canvas.Top="200"/>
 
-                            <local:PortControl     
-                                x:Name="Port02" 
-                                Id="Port02"               
+                            <local:LocationControl     
+                                x:Name="Loc02" 
+                                Id="Loc02"               
                                 Canvas.Left="220"   
                                 Canvas.Top="200"/>
 
-                            <local:PortControl                
-                                x:Name="Port03"                 
-                                Id="Port03"       
+                            <local:LocationControl                
+                                x:Name="Loc03"                 
+                                Id="Loc03"       
                                 Canvas.Left="340"       
                                 Canvas.Top="200"/>
 
-                            <local:PortControl           
-                                x:Name="Port04"                  
-                                Id="Port04"                 
+                            <local:LocationControl           
+                                x:Name="Loc04"                  
+                                Id="Loc04"                 
                                 Canvas.Left="460"               
                                 Canvas.Top="200"/>
 
-                            <local:PortControl          
-                                x:Name="Port05"                  
-                                Id="Port05"                 
+                            <local:LocationControl          
+                                x:Name="Loc05"                  
+                                Id="Loc05"                 
                                 Canvas.Left="580"               
                                 Canvas.Top="200"/>
 
-                            <local:PortControl          
-                                x:Name="Port06"                  
-                                Id="Port06"                 
+                            <local:LocationControl          
+                                x:Name="Loc06"                  
+                                Id="Loc06"                 
                                 Canvas.Left="580"               
                                 Canvas.Top="300"/>
 
-                            <local:PortControl          
-                                x:Name="Port07"                  
-                                Id="Port07"                 
+                            <local:LocationControl          
+                                x:Name="Loc07"                  
+                                Id="Loc07"                 
                                 Canvas.Left="580"               
                                 Canvas.Top="400"/>
 
-                            <local:PortControl          
-                                x:Name="Port08"                  
-                                Id="Port08"                 
+                            <local:LocationControl          
+                                x:Name="Loc08"                  
+                                Id="Loc08"                 
                                 Canvas.Left="460"               
                                 Canvas.Top="400"/>
-                            
-                            <local:PortControl          
-                                x:Name="Port09"                  
-                                Id="Port09"                 
+
+                            <local:LocationControl          
+                                x:Name="Loc09"                  
+                                Id="Loc09"                 
                                 Canvas.Left="340"               
                                 Canvas.Top="400"/>
 
-                            <local:PortControl          
-                                x:Name="Port10"                  
-                                Id="Port10"                 
+                            <local:LocationControl          
+                                x:Name="Loc10"                  
+                                Id="Loc10"                 
                                 Canvas.Left="220"               
                                 Canvas.Top="400"/>
 
-                            <local:PortControl          
-                                x:Name="Port11"                  
-                                Id="Port11"                 
+                            <local:LocationControl          
+                                x:Name="Loc11"                  
+                                Id="Loc11"                 
                                 Canvas.Left="100"               
                                 Canvas.Top="400"/>
 
-                            <local:PortControl          
-                                x:Name="Port12"                  
-                                Id="Port12"                 
+                            <local:LocationControl          
+                                x:Name="Loc12"                  
+                                Id="Loc12"                 
                                 Canvas.Left="100"               
                                 Canvas.Top="300"/>
-
-
 
                             <local:CarrierControl                    
                                 x:Name="Carrier01"                           

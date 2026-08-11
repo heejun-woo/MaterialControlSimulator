@@ -1,0 +1,64 @@
+﻿<local:NodeControl
+    x:Class="MaterialControlSimulator.Controls.LocationControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:MaterialControlSimulator.Controls"            
+    Width="80"
+    Height="80">
+    <Grid>
+
+        <!-- 외곽 -->
+        <Border
+            CornerRadius="8"
+            Background="#24232E"
+            BorderBrush="#7667D8"
+            BorderThickness="2">
+
+            <Grid>
+
+                <!-- 내부 위치 영역 -->
+                <Border
+                    Margin="12"
+                    Background="#171820"
+                    BorderBrush="#7667D8"
+                    BorderThickness="1"
+                    CornerRadius="4">
+
+                    <Grid>
+
+                        <!-- 위치 영역 표시 -->
+                        <Rectangle
+                            Margin="5"
+                            Stroke="#7667D8"
+                            StrokeThickness="1"
+                            StrokeDashArray="3 2"/>
+
+                        <!-- 중앙 표시 -->
+                        <Ellipse
+                            Width="8"
+                            Height="8"
+                            Fill="#A69AFF"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+
+                    </Grid>
+
+                </Border>
+
+                <!-- ID -->
+                <TextBlock
+                    Text="{Binding Id,
+                           RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    Foreground="White"
+                    FontSize="11"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,6"/>
+
+            </Grid>
+
+        </Border>
+
+    </Grid>
+</local:NodeControl>

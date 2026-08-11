@@ -55,24 +55,30 @@ namespace MaterialControlSimulator
         private void LayoutManager_LoadComplete()
         {
 
-            Port01.Connect(Port02);
-            Port02.Connect(Port03);
-            Port03.Connect(Port04);
-            Port04.Connect(Port05);
-            Port05.Connect(Port06);
-            Port06.Connect(Port07);
-            Port07.Connect(Port08);
-            Port08.Connect(Port09);
-            Port09.Connect(Port10);
-            Port10.Connect(Port11);
-            Port11.Connect(Port12);
-            Port12.Connect(Port01);
+            Loc01.Connect(Loc02);
+            Loc02.Connect(Loc03);
+            Loc03.Connect(Loc04);
+            Loc04.Connect(Loc05);
+            Loc05.Connect(Loc06);
+            Loc06.Connect(Loc07);
+            Loc07.Connect(Loc08);
+            Loc08.Connect(Loc09);
+            Loc09.Connect(Loc10);
+            Loc10.Connect(Loc11);
+            Loc11.Connect(Loc12);
+            Loc12.Connect(Loc01);
+
+            Port01.Connect(Loc01);
+            Loc01.Connect(Port01);
+
+            Port02.Connect(Loc07);
+            Loc07.Connect(Port02);
 
             Logger.Info("Layout Load Complete");
             _simulation = new(App.CarrierManager, App.Nodes);
 
             Carrier01.SetPosition(Port01);
-            _simulation.SetDestination(App.CarrierManager.Get("C01"), Port06);
+            _simulation.SetDestination(App.CarrierManager.Get("C01"), Loc06);
 
         }
 

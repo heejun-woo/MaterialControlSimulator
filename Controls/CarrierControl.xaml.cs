@@ -13,6 +13,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Xml.Linq;
 
 namespace MaterialControlSimulator.Controls
 {
@@ -32,6 +33,7 @@ namespace MaterialControlSimulator.Controls
             get => (string)GetValue(IdProperty);
             set => SetValue(IdProperty, value);
         }
+        public bool IsNotEmpty { get; private set; } = true;
 
         public NodeControl? CurrentNode { get; set; }
 
@@ -47,100 +49,57 @@ namespace MaterialControlSimulator.Controls
             App.CarrierManager.Register(this);
         }
 
-        public async Task MoveToAsync(Point target, double speed = 200)
+        public async Task MoveToAsync(NodeControl node)
         {
-            Point current = GetCurrentPosition();
+            var target = GetNodePosition(node);
 
-            double distance = Math.Sqrt(
-                Math.Pow(target.X - current.X, 2) +
-                Math.Pow(target.Y - current.Y, 2));
+            var startX = Canvas.GetLeft(this);
+            var startY = Canvas.GetTop(this);
 
+            if (double.IsNaN(startX))
+                startX = 0;
 
-            double seconds = distance / speed;
+            if (double.IsNaN(startY))
+                startY = 0;
 
+            var duration = TimeSpan.FromMilliseconds(500);
 
-            await AnimateAsync(
-                current,
-                target,
-                TimeSpan.FromSeconds(seconds));
-        }
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-
-        private Point GetCurrentPosition()
-        {
-            double x = Canvas.GetLeft(this);
-            double y = Canvas.GetTop(this);
-
-            if (double.IsNaN(x))
-                x = 0;
-
-            if (double.IsNaN(y))
-                y = 0;
-
-            return new Point(x, y);
-        }
-
-
-        public Task AnimateAsync(Point from, Point to, TimeSpan duration)
-        {
-            var tcs = new TaskCompletionSource<bool>();
-
-            int completed = 0;
-
-
-            void Complete()
+            while (stopwatch.Elapsed < duration)
             {
-                completed++;
+                var progress =
+                    stopwatch.Elapsed.TotalMilliseconds /
+                    duration.TotalMilliseconds;
 
-                if (completed == 2)
-                {
-                    Canvas.SetLeft(this, to.X);
-                    Canvas.SetTop(this, to.Y);
+                progress = Math.Min(progress, 1.0);
 
-                    BeginAnimation(Canvas.LeftProperty, null);
-                    BeginAnimation(Canvas.TopProperty, null);
+                Canvas.SetLeft(
+                    this,
+                    startX + (target.X - startX) * progress);
 
-                    tcs.TrySetResult(true);
-                }
+                Canvas.SetTop(
+                    this,
+                    startY + (target.Y - startY) * progress);
+
+                await Task.Delay(16);
             }
 
-
-            var xAnimation = new DoubleAnimation
-            {
-                From = from.X,
-                To = to.X,
-                Duration = duration
-            };
-
-
-            var yAnimation = new DoubleAnimation
-            {
-                From = from.Y,
-                To = to.Y,
-                Duration = duration
-            };
-
-
-            xAnimation.Completed += (s, e) => Complete();
-            yAnimation.Completed += (s, e) => Complete();
-
-
-            BeginAnimation(
-                Canvas.LeftProperty,
-                xAnimation);
-
-
-            BeginAnimation(
-                Canvas.TopProperty,
-                yAnimation);
-
-
-            return tcs.Task;
+            Canvas.SetLeft(this, target.X);
+            Canvas.SetTop(this, target.Y);
         }
+
 
         public void SetPosition(NodeControl node)
         {
             CurrentNode = node;
+            var position = GetNodePosition(node);
+            Canvas.SetLeft(this, position.X);
+            Canvas.SetTop(this, position.Y);
+        }
+
+        public Point GetNodePosition(NodeControl node)
+        {
             var nodeX = Canvas.GetLeft(node);
             var nodeY = Canvas.GetTop(node);
 
@@ -150,11 +109,37 @@ namespace MaterialControlSimulator.Controls
             if (double.IsNaN(nodeY))
                 nodeY = 0;
 
-            var x = nodeX + (node.ActualWidth - ActualWidth) / 2;
-            var y = nodeY + (node.ActualHeight - ActualHeight) / 2;
+            var nodeWidth = node.ActualWidth > 0
+                ? node.ActualWidth
+                : node.Width;
 
-            Canvas.SetLeft(this, x);
-            Canvas.SetTop(this, y);
+            var nodeHeight = node.ActualHeight > 0
+                ? node.ActualHeight
+                : node.Height;
+
+            var carrierWidth = ActualWidth > 0
+                ? ActualWidth
+                : Width;
+
+            var carrierHeight = ActualHeight > 0
+                ? ActualHeight
+                : Height;
+
+            if (double.IsNaN(nodeWidth))
+                nodeWidth = 0;
+
+            if (double.IsNaN(nodeHeight))
+                nodeHeight = 0;
+
+            if (double.IsNaN(carrierWidth))
+                carrierWidth = 80; // Carrier가 생성되기전에 접근하는 경우 
+
+            if (double.IsNaN(carrierHeight))
+                carrierHeight = 80; // Carrier가 생성되기전에 접근하는 경우 
+
+            return new Point(
+                nodeX + (nodeWidth - carrierWidth) / 2,
+                nodeY + (nodeHeight - carrierHeight) / 2);
         }
     }
 }
