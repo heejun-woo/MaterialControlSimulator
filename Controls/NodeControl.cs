@@ -130,32 +130,7 @@ namespace MaterialControlSimulator.Controls
         #region PLC 관련 속성
         public ObservableCollection<PlcBinding> PlcBindings { get; } = new();
 
-        public string CarrierID
-        {
-            get => Carrier.Id;
-            set
-            {
-                CarrierID = value;
-
-                if (!App.CarrierManager.ContainKey(value))
-                {
-                    CarrierControl CreatedCarrier = new CarrierControl
-                    {
-                        Id = value
-                    };
-
-                    TryEnter(CreatedCarrier);
-                    CreatedCarrier.SetPosition(this);
-
-                    App.CarrierManager.Register(CreatedCarrier);
-                }
-                else
-                {
-                    TryEnter(App.CarrierManager.GetCarrierControl(value));
-                }
-
-            }
-        }
+        public string CarrierID { get; set; }
         public bool IsExist  { get; set; }
   
         #endregion

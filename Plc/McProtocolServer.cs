@@ -101,7 +101,6 @@ namespace MaterialControlSimulator.Plc
                 }
             }
         }
-
         private byte[] ProcessRequest(byte[] request)
         {
             if (request.Length < 21)
@@ -122,32 +121,28 @@ namespace MaterialControlSimulator.Plc
                 | (request[16] << 8)
                 | (request[17] << 16);
 
-            byte deviceCode = request[18];
+            byte deviceCode =
+                request[18];
 
             ushort points =
                 BitConverter.ToUInt16(request, 19);
 
-            // 0401 Batch Read
             if (command == 0x0401)
             {
-                // B 디바이스
-                if (deviceCode == 0xA0)
+                if (deviceCode == 0xA0) // B
                 {
-                    if (subCommand == 0x0000)
-                    {
-                        return ReadBit16(
-                            request,
-                            deviceNumber,
-                            points);
-                    }
+                    return ReadBitBatch(
+                        request,
+                        deviceNumber,
+                        points);
+                }
 
-                    if (subCommand == 0x0001)
-                    {
-                        return ReadBit1(
-                            request,
-                            deviceNumber,
-                            points);
-                    }
+                if (deviceCode == 0xB4) // W
+                {
+                    return ReadWordBatch(
+                        request,
+                        deviceNumber,
+                        points);
                 }
 
                 return CreateErrorResponse(
@@ -155,7 +150,7 @@ namespace MaterialControlSimulator.Plc
                     0xC051);
             }
 
-            // 0403은 일단 로그만 확인
+            // 0403
             if (command == 0x0403)
             {
                 return ProcessRandomRead(request);
@@ -166,27 +161,107 @@ namespace MaterialControlSimulator.Plc
                 0xC059);
         }
 
-        #region MyRegion
-        private byte[] ReadBit16(
-            byte[] request,
-            int startAddress,
-            ushort points)
+        private string GetPlcAddress(byte deviceCode, int address)
+        {
+            return deviceCode switch
+            {
+                0xA0 => $"B{address:X}",
+                0xB4 => $"W{address:X}",
+
+                _ => throw new NotSupportedException(
+                    $"Unsupported device code: 0x{deviceCode:X2}")
+            };
+        }
+
+        private byte[] ReadWordBatch(byte[] request, int startAddress, ushort points)
         {
             if (points == 0)
                 return CreateErrorResponse(request, 0xC051);
 
             var data = new List<byte>();
 
-            for (int wordIndex = 0; wordIndex < points; wordIndex++)
+            for (int i = 0; i < points; i++)
+            {
+                int address =
+                    startAddress + i;
+
+                string plcAddress =
+                    $"W{address:X}";
+
+                object? value =
+                    _bindingManager.GetValue(plcAddress);
+
+                ushort word = 0;
+
+                if (value != null)
+                {
+                    word = Convert.ToUInt16(value);
+                }
+
+                data.Add((byte)(word & 0xFF));
+                data.Add((byte)(word >> 8));
+            }
+
+            return CreateWordResponse(
+                request,
+                data.ToArray());
+        }
+
+        private byte[] CreateWordResponse(byte[] request, byte[] data)
+        {
+            using var ms = new MemoryStream();
+
+            ms.WriteByte(0xD0);
+            ms.WriteByte(0x00);
+
+            ms.WriteByte(request[2]);
+            ms.WriteByte(request[3]);
+
+            ms.WriteByte(request[4]);
+            ms.WriteByte(request[5]);
+
+            ms.WriteByte(request[6]);
+
+            ushort dataLength =
+                (ushort)(2 + data.Length);
+
+            ms.WriteByte(
+                (byte)(dataLength & 0xFF));
+
+            ms.WriteByte(
+                (byte)(dataLength >> 8));
+
+            // Completion Code
+            ms.WriteByte(0x00);
+            ms.WriteByte(0x00);
+
+            ms.Write(
+                data,
+                0,
+                data.Length);
+
+            return ms.ToArray();
+        }
+
+        private byte[] ReadBitBatch(byte[] request, int startAddress, ushort points)
+        {
+            if (points == 0)
+                return CreateErrorResponse(request, 0xC051);
+
+            var data = new List<byte>();
+
+            // 1 point 요청이어도 16개의 B를 하나의 word로 읽음
+            for (int wordIndex = 0;
+                 wordIndex < points;
+                 wordIndex++)
             {
                 ushort word = 0;
 
-                // 1 word = 16 bit devices
                 for (int bit = 0; bit < 16; bit++)
                 {
                     int address =
                         startAddress +
-                        (wordIndex * 16) +
+                        wordIndex * 16 +
                         bit;
 
                     string plcAddress =
@@ -199,18 +274,12 @@ namespace MaterialControlSimulator.Plc
                         value != null &&
                         Convert.ToBoolean(value);
 
-                    Debug.WriteLine(
-                        $"MC READ {plcAddress} = {on}");
-
                     if (on)
-                    {
                         word |= (ushort)(1 << bit);
-                    }
                 }
 
-                // MC Binary = little endian
                 data.Add((byte)(word & 0xFF));
-                data.Add((byte)((word >> 8) & 0xFF));
+                data.Add((byte)(word >> 8));
             }
 
             return CreateWordResponse(
@@ -218,185 +287,44 @@ namespace MaterialControlSimulator.Plc
                 data.ToArray());
         }
 
-        private byte[] CreateWordResponse(
-            byte[] request,
-            byte[] data)
-        {
-            using var ms = new MemoryStream();
-
-            // Response subheader
-            ms.WriteByte(0xD0);
-            ms.WriteByte(0x00);
-
-            // Network
-            ms.WriteByte(request[2]);
-
-            // PC No.
-            ms.WriteByte(request[3]);
-
-            // Request I/O
-            ms.WriteByte(request[4]);
-            ms.WriteByte(request[5]);
-
-            // Station
-            ms.WriteByte(request[6]);
-
-            // Data length
-            // Completion Code 2byte + actual data
-            ushort dataLength =
-                (ushort)(2 + data.Length);
-
-            ms.WriteByte(
-                (byte)(dataLength & 0xFF));
-
-            ms.WriteByte(
-                (byte)((dataLength >> 8) & 0xFF));
-
-            // Completion Code = 0000
-            ms.WriteByte(0x00);
-            ms.WriteByte(0x00);
-
-            // Data
-            ms.Write(
-                data,
-                0,
-                data.Length);
-
-            return ms.ToArray();
-        }
-
-
-        private byte[] ReadBit1(
-    byte[] request,
-    int startAddress,
-    ushort points)
-        {
-            if (points == 0)
-            {
-                return CreateErrorResponse(
-                    request,
-                    0xC051);
-            }
-
-            var result = new List<byte>();
-
-            for (int i = 0; i < points; i++)
-            {
-                string address =
-                    $"B{(startAddress + i):X}";
-
-                var value =
-                    _bindingManager.GetValue(address);
-
-                result.Add(
-                    value != null &&
-                    Convert.ToBoolean(value)
-                        ? (byte)0x01
-                        : (byte)0x00);
-            }
-
-            return CreateBit1Response(
-                request,
-                result);
-        }
-        private byte[] CreateBit1Response(
-    byte[] request,
-    List<byte> values)
-        {
-            using var ms = new MemoryStream();
-
-            ms.WriteByte(0xD0);
-            ms.WriteByte(0x00);
-
-            ms.WriteByte(request[2]);
-            ms.WriteByte(request[3]);
-
-            ms.WriteByte(request[4]);
-            ms.WriteByte(request[5]);
-
-            ms.WriteByte(request[6]);
-
-            ushort dataLength =
-                (ushort)(2 + values.Count);
-
-            ms.WriteByte(
-                (byte)(dataLength & 0xFF));
-
-            ms.WriteByte(
-                (byte)((dataLength >> 8) & 0xFF));
-
-            // Completion code
-            ms.WriteByte(0x00);
-            ms.WriteByte(0x00);
-
-            foreach (var value in values)
-                ms.WriteByte(value);
-
-            return ms.ToArray();
-        }
-        #endregion
-
         private byte[] ProcessRandomRead(byte[] request)
         {
-            // 0403 Random Read
+            // 0403 request data
             //
-            // 요청:
-            // Command    : 0403
-            // Subcommand : 0000
-            //
-            // Random Read는
-            // word device / bit device를 각각 지정할 수 있다.
+            // 15-16 : number of word access points
+            // 17-18 : number of double word access points
+            // 이후  : word device list
+            //         double word device list
 
-            if (request.Length < 15)
-                return Array.Empty<byte>();
-
-            ushort subCommand =
-                BitConverter.ToUInt16(request, 13);
-
-            if (subCommand != 0x0000)
+            Debug.WriteLine($"0403 Length = {request.Length}");
+            for (int i = 0; i < request.Length; i++)
             {
-                return CreateErrorResponse(
-                    request,
-                    0xC05C);
+                Debug.WriteLine(
+                $"[{i}] = {request[i]:X2}");
             }
 
-            // ------------------------------------------------
-            // 0403 요청 데이터
-            //
-            // 이후:
-            // Number of word devices
-            // Number of double-word devices
-            // ...
-            // ------------------------------------------------
+            if (request.Length < 19)
+                return CreateErrorResponse(request, 0xC051);
 
-            int offset = 15;
+            ushort wordCount =
+                BitConverter.ToUInt16(request, 15);
 
-            if (request.Length < offset + 2)
-                return CreateErrorResponse(
-                    request,
-                    0xC051);
+            ushort doubleWordCount =
+                BitConverter.ToUInt16(request, 17);
 
-            byte wordCount = request[offset];
-            byte dWordCount = request[offset + 1];
+            int offset = 19;
 
-            offset += 2;
+            var data = new List<byte>();
 
-            var values = new List<ushort>();
-
-            // ------------------------------------------------
-            // Word devices
-            // ------------------------------------------------
-
+            // -------------------------
+            // Word access
+            // -------------------------
             for (int i = 0; i < wordCount; i++)
             {
-                if (request.Length < offset + 4)
-                {
-                    return CreateErrorResponse(
-                        request,
-                        0xC051);
-                }
+                if (offset + 4 > request.Length)
+                    return CreateErrorResponse(request, 0xC051);
 
-                int deviceNumber =
+                int address =
                     request[offset]
                     | (request[offset + 1] << 8)
                     | (request[offset + 2] << 16);
@@ -406,50 +334,53 @@ namespace MaterialControlSimulator.Plc
 
                 offset += 4;
 
-                string address =
-                    deviceCode switch
-                    {
-                        0xA0 => $"B{deviceNumber:X}",
-                        0xB4 => $"W{deviceNumber:X}",
-
-                        _ => string.Empty
-                    };
-
-                if (string.IsNullOrEmpty(address))
-                {
-                    return CreateErrorResponse(
-                        request,
-                        0xC051);
-                }
+                string plcAddress =
+                    GetPlcAddress(
+                        deviceCode,
+                        address);
 
                 object? value =
-                    _bindingManager.GetValue(address);
+                    _bindingManager.GetValue(plcAddress);
 
-                ushort wordValue = 0;
+                Debug.WriteLine(
+                    $"0403 READ {plcAddress} = {value}");
+
+                ushort word = 0;
 
                 if (value != null)
                 {
-                    wordValue =
-                        Convert.ToUInt16(value);
+                    if (deviceCode == 0xA0)
+                    {
+                        // B device
+                        //
+                        // true  -> 0001
+                        // false -> 0000
+
+                        if (Convert.ToBoolean(value))
+                            word = 1;
+                    }
+                    else
+                    {
+                        word = Convert.ToUInt16(value);
+                    }
                 }
 
-                values.Add(wordValue);
+                data.Add(
+                    (byte)(word & 0xFF));
+
+                data.Add(
+                    (byte)((word >> 8) & 0xFF));
             }
 
-            // ------------------------------------------------
-            // Double Word devices
-            // ------------------------------------------------
-
-            for (int i = 0; i < dWordCount; i++)
+            // -------------------------
+            // Double word access
+            // -------------------------
+            for (int i = 0; i < doubleWordCount; i++)
             {
-                if (request.Length < offset + 4)
-                {
-                    return CreateErrorResponse(
-                        request,
-                        0xC051);
-                }
+                if (offset + 4 > request.Length)
+                    return CreateErrorResponse(request, 0xC051);
 
-                int deviceNumber =
+                int address =
                     request[offset]
                     | (request[offset + 1] << 8)
                     | (request[offset + 2] << 16);
@@ -459,43 +390,41 @@ namespace MaterialControlSimulator.Plc
 
                 offset += 4;
 
-                string address =
-                    deviceCode switch
-                    {
-                        0xA0 => $"B{deviceNumber:X}",
-                        0xB4 => $"W{deviceNumber:X}",
-
-                        _ => string.Empty
-                    };
-
-                if (string.IsNullOrEmpty(address))
-                {
-                    return CreateErrorResponse(
-                        request,
-                        0xC051);
-                }
+                string plcAddress =
+                    GetPlcAddress(
+                        deviceCode,
+                        address);
 
                 object? value =
-                    _bindingManager.GetValue(address);
+                    _bindingManager.GetValue(plcAddress);
 
-                uint dwordValue = 0;
+                Debug.WriteLine(
+                    $"0403 DREAD {plcAddress} = {value}");
+
+                uint dword = 0;
 
                 if (value != null)
                 {
-                    dwordValue =
+                    dword =
                         Convert.ToUInt32(value);
                 }
 
-                values.Add(
-                    (ushort)(dwordValue & 0xFFFF));
+                data.Add(
+                    (byte)(dword & 0xFF));
 
-                values.Add(
-                    (ushort)((dwordValue >> 16) & 0xFFFF));
+                data.Add(
+                    (byte)((dword >> 8) & 0xFF));
+
+                data.Add(
+                    (byte)((dword >> 16) & 0xFF));
+
+                data.Add(
+                    (byte)((dword >> 24) & 0xFF));
             }
 
-            return CreateRandomReadResponse(
+            return CreateWordResponse(
                 request,
-                values);
+                data.ToArray());
         }
 
         private byte[] CreateRandomReadResponse(    byte[] request,    List<ushort> values)

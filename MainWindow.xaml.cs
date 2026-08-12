@@ -205,18 +205,20 @@ namespace MaterialControlSimulator
         private void ZoomIn(object sender, RoutedEventArgs e)
         {
             SetZoom(_zoom + 0.1);
-            App.PlcBindingManager.SetValue("B100", true);
+            //App.PlcBindingManager.SetValue("B100", true);
+            App.PlcBindingManager.SetValue("W3B80", "ABCD");
 
-            Logger.Info(App.PlcBindingManager.GetValue("B100").ToString());
+            Logger.Info(App.PlcBindingManager.GetValue("W3B80").ToString());
         }
 
         private void ZoomOut(object sender, RoutedEventArgs e)
         {
             SetZoom(_zoom - 0.1);
 
-            App.PlcBindingManager.SetValue("B100", false);
+            //App.PlcBindingManager.SetValue("B100", false);
+            App.PlcBindingManager.SetValue("W3B80", "");
 
-            Logger.Info(App.PlcBindingManager.GetValue("B100").ToString());
+            Logger.Info(App.PlcBindingManager.GetValue("W3B80").ToString());
         }
 
         private void ZoomReset(object sender, RoutedEventArgs e)
@@ -304,7 +306,7 @@ namespace MaterialControlSimulator
             Port01.PlcBindings.Add(new PlcBinding
             {
                 PropertyName = "CarrierID",
-                Address = "W3800",
+                Address = "W3B80",
                 DataType = PlcDataType.String,
                 WordCount = 16
             });
