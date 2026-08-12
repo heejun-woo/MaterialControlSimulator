@@ -1,4 +1,5 @@
 ﻿using MaterialControlSimulator.Plc;
+using MaterialControlSimulator.Plc.Logic;
 using System.Configuration;
 using System.Data;
 using System.Windows;
@@ -18,12 +19,19 @@ namespace MaterialControlSimulator
 
         public static NodeManager NodeManager { get; } = new();
 
-        public static PlcBindingManager PlcBindingManager { get; } = new(Nodes);
-        public static McProtocolServer PlcServer { get; } = new(PlcBindingManager);
+        public static PlcMemory plcMemory = new PlcMemory();
+        public static PlcBindingManager PlcBindingManager { get; } = new PlcBindingManager(Nodes, plcMemory);
+        public static McProtocolServer PlcServer { get; } = new McProtocolServer(plcMemory, PlcBindingManager);
+
+        public static PlcScanEngine scanEngine = new PlcScanEngine(plcMemory);
+
 
         public App()
         {
             InitializeComponent();
+
+            scanEngine.AddLogic(new CommunicationCheckLogic());
+            scanEngine.Start();
         }
     }
 

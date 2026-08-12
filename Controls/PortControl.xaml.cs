@@ -15,6 +15,13 @@ using System.Windows.Shapes;
 
 namespace MaterialControlSimulator.Controls
 {
+    public enum PortState
+    {
+        Idle,
+        Ready,
+        Busy,
+        Error
+    }
     /// <summary>
     /// PortControl.xaml에 대한 상호 작용 논리
     /// </summary>
@@ -26,6 +33,21 @@ namespace MaterialControlSimulator.Controls
         {
             InitializeComponent();
             SelectionChanged += OnSelectionChanged;
+        }
+
+        public static readonly DependencyProperty PortStateProperty =
+            DependencyProperty.Register(
+                nameof(PortState),
+                typeof(ushort),
+                typeof(PortControl),
+                new FrameworkPropertyMetadata(
+                    (ushort)0,
+                    FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+        public ushort PortState
+        {
+            get => (ushort)GetValue(PortStateProperty);
+            set => SetValue(PortStateProperty, value);
         }
 
         private void OnSelectionChanged(bool selected)

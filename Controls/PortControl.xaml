@@ -30,13 +30,171 @@
 
                 <!-- 포트 표시 -->
                 <Ellipse
+    Width="42"
+    Height="42"
+    HorizontalAlignment="Center"
+    VerticalAlignment="Center"
+    StrokeThickness="2">
+
+                    <Ellipse.Style>
+
+                        <Style TargetType="Ellipse">
+
+                            <!-- 0 : 기본 -->
+                            <Setter Property="Fill"
+                    Value="#182329"/>
+
+                            <Setter Property="Stroke"
+                    Value="#53606C"/>
+
+                            <Style.Triggers>
+
+                                <!-- 1 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="1">
+
+                                    <Setter Property="Fill"
+                            Value="#123A32"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#00E676"/>
+
+                                </DataTrigger>
+
+                                <!-- 2 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="2">
+
+                                    <Setter Property="Fill"
+                            Value="#15334A"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#40C4FF"/>
+
+                                </DataTrigger>
+
+                                <!-- 3 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="3">
+
+                                    <Setter Property="Fill"
+                            Value="#40351A"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#FFC107"/>
+
+                                </DataTrigger>
+
+                                <!-- 4 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="4">
+
+                                    <Setter Property="Fill"
+                            Value="#421D23"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#FF5252"/>
+
+                                </DataTrigger>
+
+                            </Style.Triggers>
+
+                        </Style>
+
+                    </Ellipse.Style>
+
+                </Ellipse>
+                <Ellipse
                     Width="42"
                     Height="42"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Fill="#182329"
-                    Stroke="#00B8D4"
-                    StrokeThickness="2"/>
+                    StrokeThickness="2">
+
+                    <Ellipse.Style>
+
+                        <Style TargetType="Ellipse">
+
+                            <!-- 0 : 기본 -->
+                            <Setter Property="Fill"
+                    Value="#182329"/>
+
+                            <Setter Property="Stroke"
+                    Value="#53606C"/>
+
+                            <Style.Triggers>
+
+                                <!-- 1 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="1">
+
+                                    <Setter Property="Fill"
+                            Value="#123A32"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#00E676"/>
+
+                                </DataTrigger>
+
+                                <!-- 2 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="2">
+
+                                    <Setter Property="Fill"
+                            Value="#15334A"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#40C4FF"/>
+
+                                </DataTrigger>
+
+                                <!-- 3 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="3">
+
+                                    <Setter Property="Fill"
+                            Value="#40351A"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#FFC107"/>
+
+                                </DataTrigger>
+
+                                <!-- 4 -->
+                                <DataTrigger
+                    Binding="{Binding PortState,
+                        RelativeSource={RelativeSource AncestorType=local:PortControl}}"
+                    Value="4">
+
+                                    <Setter Property="Fill"
+                            Value="#421D23"/>
+
+                                    <Setter Property="Stroke"
+                            Value="#FF5252"/>
+
+                                </DataTrigger>
+
+                            </Style.Triggers>
+
+                        </Style>
+
+                    </Ellipse.Style>
+
+                </Ellipse>
 
                 <!-- 입출고 방향 표시 -->
                 <Path
@@ -58,6 +216,7 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
                     Margin="0,0,0,6"/>
+
 
             </Grid>
 

@@ -33,8 +33,6 @@ namespace MaterialControlSimulator
         {
             InitializeComponent();
 
-            PlcStart(5000);
-
             _layoutManager = new LayoutManager();
             _layoutManager.LoadComplete += LayoutManager_LoadComplete;
             PropertyGrid.ItemsSource = Properties;
@@ -87,9 +85,17 @@ namespace MaterialControlSimulator
 
             SetPlcAddress();
 
-            Logger.Info("Layout Load Complete");
             _simulation = new(App.CarrierManager, App.Nodes);
             RefreshEquipmentTree();
+
+            // Node / 프로젝트 로딩 완료
+            App.PlcBindingManager.RebuildCache();
+            // 그 다음 MC Server 시작
+            PlcStart(5000);
+
+            Logger.Info("Layout Load Complete");
+
+
 
             Carrier01.SetPosition(Port01);
             _simulation.SetDestination(App.CarrierManager.Get("C01"), Loc06);
@@ -206,9 +212,10 @@ namespace MaterialControlSimulator
         {
             SetZoom(_zoom + 0.1);
             //App.PlcBindingManager.SetValue("B100", true);
-            App.PlcBindingManager.SetValue("W3B80", "ABCD");
+            App.PlcBindingManager.SetValue("W100", "ABCDrtr23");
+            App.PlcBindingManager.SetValue("W300", "TTTTT");
 
-            Logger.Info(App.PlcBindingManager.GetValue("W3B80").ToString());
+            Logger.Info(App.PlcBindingManager.GetValue<string>("W300", 10));
         }
 
         private void ZoomOut(object sender, RoutedEventArgs e)
@@ -216,9 +223,10 @@ namespace MaterialControlSimulator
             SetZoom(_zoom - 0.1);
 
             //App.PlcBindingManager.SetValue("B100", false);
-            App.PlcBindingManager.SetValue("W3B80", "");
+            App.PlcBindingManager.SetValue("W100", "");
 
-            Logger.Info(App.PlcBindingManager.GetValue("W3B80").ToString());
+            ushort[] words =App.PlcBindingManager.GetWords("W300",10);
+            Logger.Info(words.ToString());
         }
 
         private void ZoomReset(object sender, RoutedEventArgs e)
@@ -306,7 +314,7 @@ namespace MaterialControlSimulator
             Port01.PlcBindings.Add(new PlcBinding
             {
                 PropertyName = "CarrierID",
-                Address = "W3B80",
+                Address = "W100",
                 DataType = PlcDataType.String,
                 WordCount = 16
             });
@@ -318,7 +326,14 @@ namespace MaterialControlSimulator
                 DataType = PlcDataType.Bool
             });
 
-            
+            Port01.PlcBindings.Add(new PlcBinding
+            {
+                PropertyName = "PortState",
+                Address = "W200",
+                DataType = PlcDataType.UInt16
+            });
+
+
             Debug.WriteLine(App.PlcBindingManager.GetValue("B100"));
         }
 

@@ -1,12 +1,17 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MaterialControlSimulator.Plc
 {
     public class McProtocolServer
     {
+        private readonly PlcMemory _memory;
         private readonly PlcBindingManager _bindingManager;
 
         private TcpListener? _listener;
@@ -15,12 +20,19 @@ namespace MaterialControlSimulator.Plc
         public bool IsRunning => _listener != null;
 
         public McProtocolServer(
+            PlcMemory memory,
             PlcBindingManager bindingManager)
         {
+            _memory = memory;
             _bindingManager = bindingManager;
         }
 
-        public async Task StartAsync(int port = 5000)
+        // ============================================================
+        // START / STOP
+        // ============================================================
+
+        public async Task StartAsync(
+            int port = 5000)
         {
             if (IsRunning)
                 return;
@@ -33,127 +45,362 @@ namespace MaterialControlSimulator.Plc
 
             _listener.Start();
 
-            while (!_cts.Token.IsCancellationRequested)
+            Debug.WriteLine(
+                $"MC Server Started : {port}");
+
+            try
             {
-                try
+                while (!_cts.Token.IsCancellationRequested)
                 {
-                    var client =
-                        await _listener.AcceptTcpClientAsync(
-                            _cts.Token);
-
-                    _ = HandleClientAsync(client);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch
-                {
-                    // 로그
-                }
-            }
-        }
-
-        private async Task HandleClientAsync(
-            TcpClient client)
-        {
-            using (client)
-            {
-                var stream = client.GetStream();
-
-                var buffer = new byte[4096];
-
-                while (client.Connected)
-                {
-                    int length;
+                    TcpClient client;
 
                     try
                     {
-                        length = await stream.ReadAsync(
-                            buffer,
-                            _cts?.Token ?? CancellationToken.None);
+                        client =
+                            await _listener.AcceptTcpClientAsync(
+                                _cts.Token);
                     }
-                    catch
+                    catch (OperationCanceledException)
                     {
                         break;
                     }
-
-                    if (length <= 0)
-                        break;
-
-                    var request =
-                        buffer[..length];
-
-                    Debug.WriteLine($"MC RX [{length}] : " + BitConverter.ToString(request));
-
-                    var response =
-                        ProcessRequest(request);
-
-                    Debug.WriteLine($"MC TX [{response.Length}] : " +BitConverter.ToString(response));
-
-                    if (response.Length > 0)
+                    catch (ObjectDisposedException)
                     {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(
+                            $"MC Accept ERROR : {ex.Message}");
+
+                        continue;
+                    }
+
+                    // Accept loop를 막지 않음
+                    _ = HandleClientAsync(
+                        client,
+                        _cts.Token);
+                }
+            }
+            finally
+            {
+                try
+                {
+                    _listener?.Stop();
+                }
+                catch
+                {
+                }
+
+                _listener = null;
+            }
+        }
+
+        public void Stop()
+        {
+            try
+            {
+                _cts?.Cancel();
+                _listener?.Stop();
+            }
+            catch
+            {
+            }
+            finally
+            {
+                _listener = null;
+
+                _cts?.Dispose();
+                _cts = null;
+            }
+
+            Debug.WriteLine(
+                "MC Server Stopped");
+        }
+
+        // ============================================================
+        // CLIENT
+        // ============================================================
+
+        private async Task HandleClientAsync(
+            TcpClient client,
+            CancellationToken token)
+        {
+            using (client)
+            {
+                // 불필요한 지연 방지
+                client.NoDelay = true;
+
+                NetworkStream stream =
+                    client.GetStream();
+
+                Debug.WriteLine(
+                    $"MC Client Connected : " +
+                    $"{client.Client.RemoteEndPoint}");
+
+                try
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        byte[]? request =
+                            await ReadFrameAsync(
+                                stream,
+                                token);
+
+                        if (request == null)
+                            break;
+
+                        byte[] response;
+
+                        try
+                        {
+                            response =
+                                ProcessRequest(
+                                    request);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine(
+                                $"MC Process ERROR : {ex}");
+
+                            response =
+                                CreateErrorResponse(
+                                    request,
+                                    0xC051);
+                        }
+
+                        if (response.Length == 0)
+                            continue;
+
                         await stream.WriteAsync(
-                            response,
-                            _cts?.Token ??
-                            CancellationToken.None);
+                            response.AsMemory(),
+                            token);
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (IOException)
+                {
+                }
+                catch (SocketException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(
+                        $"MC Client ERROR : {ex.Message}");
+                }
+                finally
+                {
+                    Debug.WriteLine(
+                        "MC Client Disconnected");
                 }
             }
         }
-        private byte[] ProcessRequest(byte[] request)
-        {
-            if (request.Length < 21)
-                return Array.Empty<byte>();
 
-            if (request[0] != 0x50 ||
-                request[1] != 0x00)
+        // ============================================================
+        // FRAME READER
+        // ============================================================
+
+        private static async Task<byte[]?>
+            ReadFrameAsync(
+                NetworkStream stream,
+                CancellationToken token)
+        {
+            // 3E Binary header
+            const int headerLength = 9;
+
+            byte[] header =
+                new byte[headerLength];
+
+            bool headerOk =
+                await ReadExactAsync(
+                    stream,
+                    header,
+                    headerLength,
+                    token);
+
+            if (!headerOk)
+                return null;
+
+            // Request subheader
+            if (header[0] != 0x50 ||
+                header[1] != 0x00)
+            {
+                return null;
+            }
+
+            int dataLength =
+                header[7] |
+                (header[8] << 8);
+
+            if (dataLength <= 0)
+                return null;
+
+            // 비정상 packet 방어
+            if (dataLength > 65535)
+                return null;
+
+            byte[] frame =
+                new byte[
+                    headerLength +
+                    dataLength];
+
+            Buffer.BlockCopy(
+                header,
+                0,
+                frame,
+                0,
+                headerLength);
+
+            byte[] body =
+                new byte[dataLength];
+
+            bool bodyOk =
+                await ReadExactAsync(
+                    stream,
+                    body,
+                    dataLength,
+                    token);
+
+            if (!bodyOk)
+                return null;
+
+            Buffer.BlockCopy(
+                body,
+                0,
+                frame,
+                headerLength,
+                dataLength);
+
+            return frame;
+        }
+
+        private static async Task<bool>
+            ReadExactAsync(
+                NetworkStream stream,
+                byte[] buffer,
+                int count,
+                CancellationToken token)
+        {
+            int offset = 0;
+
+            while (offset < count)
+            {
+                int read =
+                    await stream.ReadAsync(
+                        buffer.AsMemory(
+                            offset,
+                            count - offset),
+                        token);
+
+                if (read <= 0)
+                    return false;
+
+                offset += read;
+            }
+
+            return true;
+        }
+
+        // ============================================================
+        // REQUEST DISPATCH
+        // ============================================================
+
+        private byte[] ProcessRequest(
+            byte[] request)
+        {
+            if (request.Length < 15)
                 return Array.Empty<byte>();
 
             ushort command =
-                BitConverter.ToUInt16(request, 11);
+                ReadUInt16(
+                    request,
+                    11);
 
             ushort subCommand =
-                BitConverter.ToUInt16(request, 13);
+                ReadUInt16(
+                    request,
+                    13);
 
-            int deviceNumber =
-                request[15]
-                | (request[16] << 8)
-                | (request[17] << 16);
-
-            byte deviceCode =
-                request[18];
-
-            ushort points =
-                BitConverter.ToUInt16(request, 19);
-
-            if (command == 0x0401)
+            return command switch
             {
-                if (deviceCode == 0xA0) // B
-                {
-                    return ReadBitBatch(
+                // Batch Read
+                0x0401 =>
+                    ProcessBatchRead(
                         request,
-                        deviceNumber,
-                        points);
-                }
+                        subCommand),
 
-                if (deviceCode == 0xB4) // W
-                {
-                    return ReadWordBatch(
+                // Random Read
+                0x0403 =>
+                    ProcessRandomRead(
+                        request),
+
+                // Batch Write
+                0x1401 =>
+                    ProcessBatchWrite(
                         request,
-                        deviceNumber,
-                        points);
-                }
+                        subCommand),
 
+                _ =>
+                    CreateErrorResponse(
+                        request,
+                        0xC059)
+            };
+        }
+
+        // ============================================================
+        // 0401 BATCH READ
+        // ============================================================
+
+        private byte[] ProcessBatchRead(
+            byte[] request,
+            ushort subCommand)
+        {
+            if (request.Length < 21)
+            {
                 return CreateErrorResponse(
                     request,
                     0xC051);
             }
 
-            // 0403
-            if (command == 0x0403)
+            int address =
+                ReadDeviceAddress(
+                    request,
+                    15);
+
+            byte deviceCode =
+                request[18];
+
+            ushort points =
+                ReadUInt16(
+                    request,
+                    19);
+
+            if (points == 0)
             {
-                return ProcessRandomRead(request);
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            if (subCommand == 0x0000)
+            {
+                return ReadBatchWordUnits(
+                    request,
+                    deviceCode,
+                    address,
+                    points);
+            }
+
+            if (subCommand == 0x0001)
+            {
+                return ReadBatchBitUnits(
+                    request,
+                    deviceCode,
+                    address,
+                    points);
             }
 
             return CreateErrorResponse(
@@ -161,364 +408,700 @@ namespace MaterialControlSimulator.Plc
                 0xC059);
         }
 
-        private string GetPlcAddress(byte deviceCode, int address)
+        // ============================================================
+        // WORD UNIT READ
+        // ============================================================
+
+        private byte[] ReadBatchWordUnits(
+            byte[] request,
+            byte deviceCode,
+            int startAddress,
+            ushort points)
         {
-            return deviceCode switch
+            // ------------------------------------------
+            // W
+            // ------------------------------------------
+
+            if (deviceCode == 0xB4)
             {
-                0xA0 => $"B{address:X}",
-                0xB4 => $"W{address:X}",
+                // 정확히 points * 2 byte 반환
+                byte[] data =
+                    new byte[points * 2];
 
-                _ => throw new NotSupportedException(
-                    $"Unsupported device code: 0x{deviceCode:X2}")
-            };
-        }
+                int output = 0;
 
-        private byte[] ReadWordBatch(byte[] request, int startAddress, ushort points)
-        {
-            if (points == 0)
-                return CreateErrorResponse(request, 0xC051);
-
-            var data = new List<byte>();
-
-            for (int i = 0; i < points; i++)
-            {
-                int address =
-                    startAddress + i;
-
-                string plcAddress =
-                    $"W{address:X}";
-
-                object? value =
-                    _bindingManager.GetValue(plcAddress);
-
-                ushort word = 0;
-
-                if (value != null)
+                for (int i = 0;
+                     i < points;
+                     i++)
                 {
-                    word = Convert.ToUInt16(value);
+                    // 중요:
+                    // 여기서는 Binding / UI를 절대 건드리지 않는다.
+                    ushort value =
+                        _memory.ReadWord(
+                            startAddress + i);
+
+                    data[output++] =
+                        (byte)(
+                            value & 0xFF);
+
+                    data[output++] =
+                        (byte)(
+                            value >> 8);
                 }
 
-                data.Add((byte)(word & 0xFF));
-                data.Add((byte)(word >> 8));
+                return CreateSuccessResponse(
+                    request,
+                    data);
             }
 
-            return CreateWordResponse(
-                request,
-                data.ToArray());
-        }
+            // ------------------------------------------
+            // B를 WORD 단위로 읽기
+            // ------------------------------------------
 
-        private byte[] CreateWordResponse(byte[] request, byte[] data)
-        {
-            using var ms = new MemoryStream();
-
-            ms.WriteByte(0xD0);
-            ms.WriteByte(0x00);
-
-            ms.WriteByte(request[2]);
-            ms.WriteByte(request[3]);
-
-            ms.WriteByte(request[4]);
-            ms.WriteByte(request[5]);
-
-            ms.WriteByte(request[6]);
-
-            ushort dataLength =
-                (ushort)(2 + data.Length);
-
-            ms.WriteByte(
-                (byte)(dataLength & 0xFF));
-
-            ms.WriteByte(
-                (byte)(dataLength >> 8));
-
-            // Completion Code
-            ms.WriteByte(0x00);
-            ms.WriteByte(0x00);
-
-            ms.Write(
-                data,
-                0,
-                data.Length);
-
-            return ms.ToArray();
-        }
-
-        private byte[] ReadBitBatch(byte[] request, int startAddress, ushort points)
-        {
-            if (points == 0)
-                return CreateErrorResponse(request, 0xC051);
-
-            var data = new List<byte>();
-
-            // 1 point 요청이어도 16개의 B를 하나의 word로 읽음
-            for (int wordIndex = 0;
-                 wordIndex < points;
-                 wordIndex++)
+            if (deviceCode == 0xA0)
             {
-                ushort word = 0;
+                byte[] data =
+                    new byte[points * 2];
 
-                for (int bit = 0; bit < 16; bit++)
+                int output = 0;
+
+                for (int wordIndex = 0;
+                     wordIndex < points;
+                     wordIndex++)
                 {
-                    int address =
+                    ushort value = 0;
+
+                    int bitAddress =
                         startAddress +
-                        wordIndex * 16 +
-                        bit;
+                        (wordIndex * 16);
 
-                    string plcAddress =
-                        $"B{address:X}";
+                    for (int bit = 0;
+                         bit < 16;
+                         bit++)
+                    {
+                        if (_memory.ReadBit(
+                            bitAddress + bit))
+                        {
+                            value |=
+                                (ushort)(1 << bit);
+                        }
+                    }
 
-                    object? value =
-                        _bindingManager.GetValue(plcAddress);
+                    data[output++] =
+                        (byte)(
+                            value & 0xFF);
 
-                    bool on =
-                        value != null &&
-                        Convert.ToBoolean(value);
-
-                    if (on)
-                        word |= (ushort)(1 << bit);
+                    data[output++] =
+                        (byte)(
+                            value >> 8);
                 }
 
-                data.Add((byte)(word & 0xFF));
-                data.Add((byte)(word >> 8));
+                return CreateSuccessResponse(
+                    request,
+                    data);
             }
 
-            return CreateWordResponse(
+            return CreateErrorResponse(
                 request,
-                data.ToArray());
+                0xC051);
         }
 
-        private byte[] ProcessRandomRead(byte[] request)
-        {
-            // 0403 request data
-            //
-            // 15-16 : number of word access points
-            // 17-18 : number of double word access points
-            // 이후  : word device list
-            //         double word device list
+        // ============================================================
+        // BIT UNIT READ
+        // ============================================================
 
-            Debug.WriteLine($"0403 Length = {request.Length}");
-            for (int i = 0; i < request.Length; i++)
+        private byte[] ReadBatchBitUnits(
+            byte[] request,
+            byte deviceCode,
+            int startAddress,
+            ushort points)
+        {
+            if (deviceCode != 0xA0)
             {
-                Debug.WriteLine(
-                $"[{i}] = {request[i]:X2}");
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
             }
 
-            if (request.Length < 19)
-                return CreateErrorResponse(request, 0xC051);
+            int byteCount =
+                (points + 1) / 2;
 
-            ushort wordCount =
-                BitConverter.ToUInt16(request, 15);
+            byte[] data =
+                new byte[byteCount];
 
-            ushort doubleWordCount =
-                BitConverter.ToUInt16(request, 17);
+            int output = 0;
 
-            int offset = 19;
-
-            var data = new List<byte>();
-
-            // -------------------------
-            // Word access
-            // -------------------------
-            for (int i = 0; i < wordCount; i++)
+            for (int i = 0;
+                 i < points;
+                 i += 2)
             {
-                if (offset + 4 > request.Length)
-                    return CreateErrorResponse(request, 0xC051);
+                byte value = 0;
 
+                // 첫 point = upper nibble
+                if (_memory.ReadBit(
+                    startAddress + i))
+                {
+                    value |= 0x10;
+                }
+
+                // 두 번째 = lower nibble
+                if (i + 1 < points &&
+                    _memory.ReadBit(
+                        startAddress + i + 1))
+                {
+                    value |= 0x01;
+                }
+
+                data[output++] = value;
+            }
+
+            return CreateSuccessResponse(
+                request,
+                data);
+        }
+
+        // ============================================================
+        // 1401 BATCH WRITE
+        // ============================================================
+
+        private byte[] ProcessBatchWrite(
+            byte[] request,
+            ushort subCommand)
+        {
+            if (request.Length < 21)
+            {
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            int address =
+                ReadDeviceAddress(
+                    request,
+                    15);
+
+            byte deviceCode =
+                request[18];
+
+            ushort points =
+                ReadUInt16(
+                    request,
+                    19);
+
+            if (points == 0)
+            {
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            if (subCommand == 0x0000)
+            {
+                return WriteBatchWordUnits(
+                    request,
+                    deviceCode,
+                    address,
+                    points);
+            }
+
+            if (subCommand == 0x0001)
+            {
+                return WriteBatchBitUnits(
+                    request,
+                    deviceCode,
+                    address,
+                    points);
+            }
+
+            return CreateErrorResponse(
+                request,
+                0xC059);
+        }
+
+        // ============================================================
+        // WORD UNIT WRITE
+        // ============================================================
+
+        private byte[] WriteBatchWordUnits(
+            byte[] request,
+            byte deviceCode,
+            int startAddress,
+            ushort points)
+        {
+            const int dataOffset = 21;
+
+            int requiredLength =
+                dataOffset +
+                (points * 2);
+
+            if (request.Length <
+                requiredLength)
+            {
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            // ------------------------------------------
+            // W
+            // ------------------------------------------
+
+            if (deviceCode == 0xB4)
+            {
+                int offset =
+                    dataOffset;
+
+                // 1.
+                // 먼저 Memory만 빠르게 갱신
+                for (int i = 0;
+                     i < points;
+                     i++)
+                {
+                    ushort value =
+                        (ushort)(
+                            request[offset] |
+                            (request[offset + 1] << 8));
+
+                    _memory.WriteWord(
+                        startAddress + i,
+                        value);
+
+                    offset += 2;
+                }
+
+                // 2.
+                // 실제 Binding이 있는 주소만
+                // UI Property로 전달.
+                //
+                // RefreshBindingsInRange 내부에서
+                // cache를 사용해야 한다.
+                _bindingManager
+                    .RefreshBindingsInRange(
+                        startAddress,
+                        points);
+
+                return CreateSuccessResponse(
+                    request,
+                    Array.Empty<byte>());
+            }
+
+            // ------------------------------------------
+            // B WORD WRITE
+            // ------------------------------------------
+
+            if (deviceCode == 0xA0)
+            {
+                int offset =
+                    dataOffset;
+
+                for (int wordIndex = 0;
+                     wordIndex < points;
+                     wordIndex++)
+                {
+                    ushort word =
+                        (ushort)(
+                            request[offset] |
+                            (request[offset + 1] << 8));
+
+                    offset += 2;
+
+                    int bitAddress =
+                        startAddress +
+                        (wordIndex * 16);
+
+                    for (int bit = 0;
+                         bit < 16;
+                         bit++)
+                    {
+                        bool value =
+                            (word &
+                             (1 << bit)) != 0;
+
+                        // Memory 우선
+                        _memory.WriteBit(
+                            bitAddress + bit,
+                            value);
+                    }
+                }
+
+                // B 바인딩까지 갱신해야 한다면
+                // 별도 Range refresh가 필요하지만
+                // Read 성능에는 영향을 주지 않음.
+
+                return CreateSuccessResponse(
+                    request,
+                    Array.Empty<byte>());
+            }
+
+            return CreateErrorResponse(
+                request,
+                0xC051);
+        }
+
+        // ============================================================
+        // BIT UNIT WRITE
+        // ============================================================
+
+        private byte[] WriteBatchBitUnits(
+            byte[] request,
+            byte deviceCode,
+            int startAddress,
+            ushort points)
+        {
+            if (deviceCode != 0xA0)
+            {
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            const int dataOffset = 21;
+
+            int byteCount =
+                (points + 1) / 2;
+
+            if (request.Length <
+                dataOffset + byteCount)
+            {
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            for (int i = 0;
+                 i < points;
+                 i++)
+            {
+                byte packed =
+                    request[
+                        dataOffset +
+                        (i / 2)];
+
+                bool value;
+
+                if ((i & 1) == 0)
+                {
+                    value =
+                        (packed & 0x10) != 0;
+                }
+                else
+                {
+                    value =
+                        (packed & 0x01) != 0;
+                }
+
+                // Memory + 해당 Binding만 갱신
+                _bindingManager.WriteBit(
+                    startAddress + i,
+                    value);
+            }
+
+            return CreateSuccessResponse(
+                request,
+                Array.Empty<byte>());
+        }
+
+        // ============================================================
+        // 0403 RANDOM READ
+        // ============================================================
+
+        private byte[] ProcessRandomRead(
+            byte[] request)
+        {
+            if (request.Length < 17)
+            {
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            // MC 3E binary 0403:
+            // byte 15 = word access count
+            // byte 16 = double-word access count
+
+            int wordCount =
+                request[15];
+
+            int doubleWordCount =
+                request[16];
+
+            int offset = 17;
+
+            int required =
+                offset +
+                ((wordCount +
+                  doubleWordCount) * 4);
+
+            if (request.Length < required)
+            {
+                return CreateErrorResponse(
+                    request,
+                    0xC051);
+            }
+
+            byte[] data =
+                new byte[
+                    (wordCount * 2) +
+                    (doubleWordCount * 4)];
+
+            int output = 0;
+
+            // ------------------------------------------
+            // WORD
+            // ------------------------------------------
+
+            for (int i = 0;
+                 i < wordCount;
+                 i++)
+            {
                 int address =
-                    request[offset]
-                    | (request[offset + 1] << 8)
-                    | (request[offset + 2] << 16);
+                    ReadDeviceAddress(
+                        request,
+                        offset);
 
                 byte deviceCode =
                     request[offset + 3];
 
                 offset += 4;
 
-                string plcAddress =
-                    GetPlcAddress(
-                        deviceCode,
-                        address);
+                ushort value;
 
-                object? value =
-                    _bindingManager.GetValue(plcAddress);
-
-                Debug.WriteLine(
-                    $"0403 READ {plcAddress} = {value}");
-
-                ushort word = 0;
-
-                if (value != null)
+                if (deviceCode == 0xB4)
                 {
-                    if (deviceCode == 0xA0)
-                    {
-                        // B device
-                        //
-                        // true  -> 0001
-                        // false -> 0000
+                    // Memory only
+                    value =
+                        _memory.ReadWord(
+                            address);
+                }
+                else if (deviceCode == 0xA0)
+                {
+                    value = 0;
 
-                        if (Convert.ToBoolean(value))
-                            word = 1;
-                    }
-                    else
+                    for (int bit = 0;
+                         bit < 16;
+                         bit++)
                     {
-                        word = Convert.ToUInt16(value);
+                        if (_memory.ReadBit(
+                            address + bit))
+                        {
+                            value |=
+                                (ushort)(1 << bit);
+                        }
                     }
                 }
+                else
+                {
+                    return CreateErrorResponse(
+                        request,
+                        0xC051);
+                }
 
-                data.Add(
-                    (byte)(word & 0xFF));
+                data[output++] =
+                    (byte)(
+                        value & 0xFF);
 
-                data.Add(
-                    (byte)((word >> 8) & 0xFF));
+                data[output++] =
+                    (byte)(
+                        value >> 8);
             }
 
-            // -------------------------
-            // Double word access
-            // -------------------------
-            for (int i = 0; i < doubleWordCount; i++)
-            {
-                if (offset + 4 > request.Length)
-                    return CreateErrorResponse(request, 0xC051);
+            // ------------------------------------------
+            // DWORD
+            // ------------------------------------------
 
+            for (int i = 0;
+                 i < doubleWordCount;
+                 i++)
+            {
                 int address =
-                    request[offset]
-                    | (request[offset + 1] << 8)
-                    | (request[offset + 2] << 16);
+                    ReadDeviceAddress(
+                        request,
+                        offset);
 
                 byte deviceCode =
                     request[offset + 3];
 
                 offset += 4;
 
-                string plcAddress =
-                    GetPlcAddress(
-                        deviceCode,
-                        address);
+                uint value;
 
-                object? value =
-                    _bindingManager.GetValue(plcAddress);
-
-                Debug.WriteLine(
-                    $"0403 DREAD {plcAddress} = {value}");
-
-                uint dword = 0;
-
-                if (value != null)
+                if (deviceCode == 0xB4)
                 {
-                    dword =
-                        Convert.ToUInt32(value);
+                    // Memory only
+                    value =
+                        _memory.ReadDWord(
+                            address);
+                }
+                else if (deviceCode == 0xA0)
+                {
+                    value = 0;
+
+                    for (int bit = 0;
+                         bit < 32;
+                         bit++)
+                    {
+                        if (_memory.ReadBit(
+                            address + bit))
+                        {
+                            value |=
+                                1u << bit;
+                        }
+                    }
+                }
+                else
+                {
+                    return CreateErrorResponse(
+                        request,
+                        0xC051);
                 }
 
-                data.Add(
-                    (byte)(dword & 0xFF));
+                data[output++] =
+                    (byte)(
+                        value & 0xFF);
 
-                data.Add(
-                    (byte)((dword >> 8) & 0xFF));
+                data[output++] =
+                    (byte)(
+                        (value >> 8) & 0xFF);
 
-                data.Add(
-                    (byte)((dword >> 16) & 0xFF));
+                data[output++] =
+                    (byte)(
+                        (value >> 16) & 0xFF);
 
-                data.Add(
-                    (byte)((dword >> 24) & 0xFF));
+                data[output++] =
+                    (byte)(
+                        (value >> 24) & 0xFF);
             }
 
-            return CreateWordResponse(
+            return CreateSuccessResponse(
                 request,
-                data.ToArray());
+                data);
         }
 
-        private byte[] CreateRandomReadResponse(    byte[] request,    List<ushort> values)
+        // ============================================================
+        // HELPERS
+        // ============================================================
+
+        private static int ReadDeviceAddress(
+            byte[] data,
+            int offset)
         {
-            using var ms = new MemoryStream();
-
-            // 3E response
-            ms.WriteByte(0xD0);
-            ms.WriteByte(0x00);
-
-            // Network
-            ms.WriteByte(request[2]);
-
-            // PC
-            ms.WriteByte(request[3]);
-
-            // I/O
-            ms.WriteByte(request[4]);
-            ms.WriteByte(request[5]);
-
-            // Station
-            ms.WriteByte(request[6]);
-
-            // Completion code + data
-            ushort dataLength =
-                (ushort)(2 + values.Count * 2);
-
-            ms.WriteByte(
-                (byte)(dataLength & 0xFF));
-
-            ms.WriteByte(
-                (byte)((dataLength >> 8) & 0xFF));
-
-            // Completion code
-            ms.WriteByte(0x00);
-            ms.WriteByte(0x00);
-
-            foreach (ushort value in values)
-            {
-                ms.WriteByte(
-                    (byte)(value & 0xFF));
-
-                ms.WriteByte(
-                    (byte)((value >> 8) & 0xFF));
-            }
-
-            return ms.ToArray();
+            return
+                data[offset]
+                | (data[offset + 1] << 8)
+                | (data[offset + 2] << 16);
         }
 
-        private byte[] CreateErrorResponse(byte[] request, ushort errorCode)
+        private static ushort ReadUInt16(
+            byte[] data,
+            int offset)
         {
-            using var ms = new MemoryStream();
+            return (ushort)(
+                data[offset]
+                | (data[offset + 1] << 8));
+        }
+
+        // ============================================================
+        // RESPONSE
+        // ============================================================
+
+        private static byte[] CreateSuccessResponse(
+            byte[] request,
+            byte[] data)
+        {
+            if (request.Length < 7)
+                return Array.Empty<byte>();
+
+            // 11 bytes =
+            // subheader 2
+            // network   1
+            // pc        1
+            // io        2
+            // station   1
+            // length    2
+            // end code  2
+
+            byte[] response =
+                new byte[
+                    11 +
+                    data.Length];
 
             // Response subheader
-            ms.WriteByte(0xD0);
-            ms.WriteByte(0x00);
+            response[0] = 0xD0;
+            response[1] = 0x00;
 
-            // Network No.
-            ms.WriteByte(request[2]);
-
-            // PC No.
-            ms.WriteByte(request[3]);
-
-            // I/O
-            ms.WriteByte(request[4]);
-            ms.WriteByte(request[5]);
-
-            // Station
-            ms.WriteByte(request[6]);
+            // Routing information
+            response[2] = request[2];
+            response[3] = request[3];
+            response[4] = request[4];
+            response[5] = request[5];
+            response[6] = request[6];
 
             // Response data length
-            // Completion code만 존재
-            ms.WriteByte(0x02);
-            ms.WriteByte(0x00);
+            ushort length =
+                (ushort)(
+                    2 +
+                    data.Length);
 
-            // Completion code
-            ms.WriteByte(
-                (byte)(errorCode & 0xFF));
+            response[7] =
+                (byte)(
+                    length & 0xFF);
 
-            ms.WriteByte(
-                (byte)((errorCode >> 8) & 0xFF));
+            response[8] =
+                (byte)(
+                    length >> 8);
 
-            return ms.ToArray();
+            // Completion code = success
+            response[9] = 0x00;
+            response[10] = 0x00;
+
+            if (data.Length > 0)
+            {
+                Buffer.BlockCopy(
+                    data,
+                    0,
+                    response,
+                    11,
+                    data.Length);
+            }
+
+            return response;
         }
 
-        public void Stop()
+        private static byte[] CreateErrorResponse(
+            byte[] request,
+            ushort errorCode)
         {
-            _cts?.Cancel();
+            if (request.Length < 7)
+                return Array.Empty<byte>();
 
-            _listener?.Stop();
-            _listener = null;
+            byte[] response =
+                new byte[11];
 
-            _cts?.Dispose();
-            _cts = null;
+            response[0] = 0xD0;
+            response[1] = 0x00;
+
+            response[2] = request[2];
+            response[3] = request[3];
+            response[4] = request[4];
+            response[5] = request[5];
+            response[6] = request[6];
+
+            // Completion code only = 2 bytes
+            response[7] = 0x02;
+            response[8] = 0x00;
+
+            response[9] =
+                (byte)(
+                    errorCode & 0xFF);
+
+            response[10] =
+                (byte)(
+                    errorCode >> 8);
+
+            return response;
         }
     }
 }
+
+
+
