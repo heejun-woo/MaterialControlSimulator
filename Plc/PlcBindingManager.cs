@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -10,240 +11,298 @@ namespace MaterialControlSimulator.Plc
 {
     public class PlcBindingManager
     {
-        private readonly NodeRegistry _nodeRegistry;
         private readonly PlcMemory _memory;
 
-        private readonly Dictionary<string, CachedBinding>
-            _bindings =
-                new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<IPlcBindable> _targets = new();
 
-        private readonly object _bindingLock =
-            new();
+        private readonly Dictionary<string, List<CachedBinding>> _bindings = new(StringComparer.OrdinalIgnoreCase);
 
-        // ============================================================
+        private readonly object _lock = new();
+
+        // =========================================================
         // Cached Binding
-        // ============================================================
+        // =========================================================
 
         private sealed class CachedBinding
         {
-            // ★ 여기 타입은 네 NodeRegistry.Nodes의 실제 타입에 맞춰야 함.
-            //
-            // 현재 object로 두면 PlcBindingInfo.Node에 넣을 때
-            // 명시적 변환 문제가 생길 수 있으므로
-            // Find()에서 기존 Node를 다시 사용하도록 처리함.
-
-            public required object Node { get; init; }
+            public required IPlcBindable Target { get; init; }
 
             public required PlcBinding Binding { get; init; }
 
             public required PropertyInfo Property { get; init; }
         }
 
-        // ============================================================
+        // =========================================================
         // Constructor
-        // ============================================================
+        // =========================================================
 
         public PlcBindingManager(
-            NodeRegistry nodeRegistry,
             PlcMemory memory)
         {
-            _nodeRegistry = nodeRegistry;
             _memory = memory;
-
-            // 여기서 RebuildCache 하지 않음.
-            //
-            // Node가 아직 로딩되지 않았을 가능성이 있기 때문.
-            //
-            // Node 로딩 완료 후:
-            //
-            // _plcBindingManager.RebuildCache();
         }
 
-        // ============================================================
-        // CACHE
-        // ============================================================
+        // =========================================================
+        // REGISTER
+        // =========================================================
 
-        public void RebuildCache()
+        public void Register(
+            IPlcBindable target)
         {
-            lock (_bindingLock)
+            if (target == null)
+                return;
+
+            lock (_lock)
             {
-                _bindings.Clear();
+                if (_targets.Contains(target))
+                    return;
 
-                foreach (var node in _nodeRegistry.Nodes)
+                _targets.Add(target);
+            }
+
+            CacheTarget(target);
+        }
+
+        // =========================================================
+        // UNREGISTER
+        // =========================================================
+        public void Unregister(
+            IPlcBindable target)
+        {
+            if (target == null)
+                return;
+
+            lock (_lock)
+            {
+                _targets.Remove(
+                    target);
+
+                List<string> emptyKeys =
+                    new();
+
+                foreach (var pair
+                         in _bindings)
                 {
-                    foreach (var binding in node.PlcBindings)
+                    pair.Value.RemoveAll(
+                        x =>
+                            ReferenceEquals(
+                                x.Target,
+                                target));
+
+                    if (pair.Value.Count == 0)
                     {
-                        if (string.IsNullOrWhiteSpace(
-                                binding.Address))
-                        {
-                            continue;
-                        }
-
-                        if (string.IsNullOrWhiteSpace(
-                                binding.PropertyName))
-                        {
-                            continue;
-                        }
-
-                        PropertyInfo? property =
-                            node.GetType().GetProperty(
-                                binding.PropertyName);
-
-                        if (property == null)
-                        {
-                            Debug.WriteLine(
-                                $"PLC Property Not Found : " +
-                                $"{binding.Address} -> " +
-                                $"{binding.PropertyName}");
-
-                            continue;
-                        }
-
-                        _bindings[binding.Address] =
-                            new CachedBinding
-                            {
-                                Node = node,
-                                Binding = binding,
-                                Property = property
-                            };
+                        emptyKeys.Add(
+                            pair.Key);
                     }
                 }
 
-                Debug.WriteLine(
-                    $"PLC Binding Cache Count = " +
-                    $"{_bindings.Count}");
-            }
-
-            // Node 초기값을 PLC Memory에 반영
-            SyncAllBindingsToMemory();
-        }
-
-        // ============================================================
-        // FIND CACHE
-        // ============================================================
-
-        private CachedBinding? FindCached(
-            string address)
-        {
-            lock (_bindingLock)
-            {
-                if (_bindings.TryGetValue(
-                        address,
-                        out CachedBinding? cached))
+                foreach (string key
+                         in emptyKeys)
                 {
-                    return cached;
+                    _bindings.Remove(
+                        key);
                 }
             }
+        }
 
-            // --------------------------------------------------------
-            // Cache miss
-            //
-            // Node가 RebuildCache 이후 추가되었을 수도 있으므로
-            // 최초 한 번 Registry에서 검색.
-            // --------------------------------------------------------
+        // =========================================================
+        // CACHE TARGET
+        // =========================================================
 
-            foreach (var node in _nodeRegistry.Nodes)
+        private void CacheTarget(
+            IPlcBindable target)
+        {
+            foreach (PlcBinding binding
+                     in target.PlcBindings)
             {
-                var binding =
-                    node.PlcBindings.FirstOrDefault(
-                        x =>
-                            string.Equals(
-                                x.Address,
-                                address,
-                                StringComparison.OrdinalIgnoreCase));
-
-                if (binding == null)
+                if (string.IsNullOrWhiteSpace(
+                        binding.Address))
+                {
                     continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(
+                        binding.PropertyName))
+                {
+                    continue;
+                }
 
                 PropertyInfo? property =
-                    node.GetType().GetProperty(
-                        binding.PropertyName);
+                    target
+                        .GetType()
+                        .GetProperty(
+                            binding.PropertyName);
 
                 if (property == null)
-                    return null;
+                {
+                    Debug.WriteLine(
+                        $"PLC Property Not Found : " +
+                        $"{binding.Address} -> " +
+                        $"{binding.PropertyName}");
 
-                var newCached =
+                    continue;
+                }
+
+                var cached =
                     new CachedBinding
                     {
-                        Node = node,
+                        Target = target,
                         Binding = binding,
                         Property = property
                     };
 
-                lock (_bindingLock)
+
+                bool isFirstBinding = false;
+
+                lock (_lock)
                 {
-                    _bindings[address] =
-                        newCached;
+                    string key =
+                        NormalizeAddress(
+                            binding.Address);
+
+                    if (!_bindings.TryGetValue(
+                            key,
+                            out List<CachedBinding>? list))
+                    {
+                        list =
+                            new List<CachedBinding>();
+
+                        _bindings[key] =
+                            list;
+
+                        isFirstBinding = true;
+                    }
+
+                    list.Add(cached);
                 }
 
-                return newCached;
+                if (isFirstBinding)
+                {
+                    SyncBindingToMemory(
+                        binding.Address);
+                }
             }
 
-            return null;
         }
 
-        // ============================================================
-        // FIND
+        // =========================================================
+        // REBUILD CACHE
         //
-        // 기존 코드와 호환용
-        // ============================================================
+        // PLC 주소 변경 후 호출
+        // =========================================================
 
-        public PlcBindingInfo? Find(
+        public void RebuildCache()
+        {
+            List<IPlcBindable> targets;
+
+            lock (_lock)
+            {
+                targets =
+                    _targets.ToList();
+
+                _bindings.Clear();
+            }
+
+            foreach (IPlcBindable target
+                     in targets)
+            {
+                CacheTarget(
+                    target);
+            }
+
+            Debug.WriteLine(
+                $"PLC Binding Cache Count = " +
+                $"{_bindings.Count}");
+        }
+
+        // =========================================================
+        // FIND
+        // =========================================================
+
+        private CachedBinding? FindCached(
             string address)
         {
-            // CachedBinding.Node 타입 문제를 피하면서
-            // 기존 PlcBindingInfo 타입을 그대로 유지하기 위해
-            // Registry에서 실제 node를 반환한다.
-            //
-            // 이 메서드는 MC Read loop에서 사용하면 안 됨.
+            string key =
+                NormalizeAddress(
+                    address);
 
-            foreach (var node in _nodeRegistry.Nodes)
+            lock (_lock)
             {
-                var binding =
-                    node.PlcBindings.FirstOrDefault(
-                        x =>
-                            string.Equals(
-                                x.Address,
-                                address,
-                                StringComparison.OrdinalIgnoreCase));
-
-                if (binding != null)
+                if (_bindings.TryGetValue(
+                        key,
+                        out List<CachedBinding>? list) &&
+                    list.Count > 0)
                 {
-                    return new PlcBindingInfo
-                    {
-                        Node = node,
-                        Binding = binding
-                    };
+                    return list[0];
+                }
+
+                return null;
+            }
+        }
+
+        private List<CachedBinding> FindCachedAll(
+            string address)
+        {
+            string key =
+                NormalizeAddress(
+                    address);
+
+            lock (_lock)
+            {
+                if (_bindings.TryGetValue(
+                        key,
+                        out List<CachedBinding>? list))
+                {
+                    // 통신 Thread에서 순회 중
+                    // Register/Unregister되어도 영향 없도록 복사
+                    return list.ToList();
                 }
             }
 
-            return null;
+            return new List<CachedBinding>();
         }
 
-        // ============================================================
-        // GET DATA TYPE
-        // ============================================================
+        public bool HasBinding(
+            string address)
+        {
+            return
+                FindCached(address)
+                != null;
+        }
 
         public PlcDataType? GetDataType(
             string address)
         {
-            CachedBinding? cached =
-                FindCached(address);
-
-            return cached?.Binding.DataType;
+            return FindCached(
+                address)?
+                .Binding
+                .DataType;
         }
 
-        // ============================================================
+        public int GetWordCount(
+            string address)
+        {
+            CachedBinding? cached =
+                FindCached(
+                    address);
+
+            if (cached == null)
+                return 0;
+
+            return Math.Max(
+                1,
+                cached.Binding.WordCount);
+        }
+
+        // =========================================================
         // SET VALUE
         //
-        // Binding 있음:
-        //   Binding.DataType / WordCount 자동 사용
-        //   Memory + Node Property 갱신
+        // Binding 있음
+        //  -> Binding 타입 + WordCount 사용
         //
-        // Binding 없음:
-        //   value의 실제 C# 타입으로 Memory Write
-        // ============================================================
-
+        // Binding 없음
+        //  -> 실제 C# 타입으로 Memory Write
+        // =========================================================
         public bool SetValue(
             string address,
             object? value)
@@ -259,14 +318,15 @@ namespace MaterialControlSimulator.Plc
                 return false;
             }
 
-            CachedBinding? cached =
-                FindCached(address);
+            List<CachedBinding> bindings =
+                FindCachedAll(
+                    address);
 
-            // --------------------------------------------------------
+            // =====================================================
             // Binding 없음
-            // --------------------------------------------------------
+            // =====================================================
 
-            if (cached == null)
+            if (bindings.Count == 0)
             {
                 return WriteUnboundValue(
                     device,
@@ -277,48 +337,77 @@ namespace MaterialControlSimulator.Plc
 
             try
             {
-                object? converted =
+                // =================================================
+                // Memory는 한 번만 Write
+                //
+                // 같은 PLC 주소를 공유하므로 첫 Binding의
+                // PLC DataType을 기준으로 한다.
+                // =================================================
+
+                CachedBinding primary =
+                    bindings[0];
+
+                object? plcValue =
                     ConvertFromPlcType(
                         value,
-                        cached.Binding.DataType,
-                        cached.Property.PropertyType);
+                        primary.Binding.DataType,
+                        primary.Property.PropertyType);
 
-                if (converted == null)
+                if (plcValue == null)
                     return false;
-
-                // ----------------------------------------------------
-                // PLC Memory 먼저 갱신
-                // ----------------------------------------------------
 
                 if (device == 'B')
                 {
                     _memory.WriteBit(
                         deviceAddress,
-                        Convert.ToBoolean(converted));
+                        Convert.ToBoolean(
+                            plcValue));
                 }
                 else if (device == 'W')
                 {
                     WriteValueToMemory(
                         deviceAddress,
-                        converted,
-                        cached.Binding.DataType,
-                        cached.Binding.WordCount);
+                        plcValue,
+                        primary.Binding.DataType,
+                        Math.Max(
+                            1,
+                            primary.Binding.WordCount));
                 }
 
-                // Memory Write는 성공.
-                //
-                // Property가 쓰기 불가능해도 PLC Memory 값은 유지.
-                if (!cached.Property.CanWrite)
-                    return true;
+                // =================================================
+                // 같은 주소에 연결된 모든 Property 갱신
+                // =================================================
 
-                // ----------------------------------------------------
-                // Node Property
-                // ----------------------------------------------------
+                foreach (CachedBinding cached
+                         in bindings)
+                {
+                    if (!cached.Property.CanWrite)
+                        continue;
 
-                SetNodeProperty(
-                    cached,
-                    converted,
-                    address);
+                    try
+                    {
+                        object? converted =
+                            ConvertFromPlcType(
+                                value,
+                                cached.Binding.DataType,
+                                cached.Property.PropertyType);
+
+                        SetTargetProperty(
+                            cached,
+                            converted,
+                            address);
+                    }
+                    catch (Exception ex)
+                    {
+                        // 하나 실패했다고 다른 Binding까지
+                        // 갱신을 중단하면 안 됨.
+                        Debug.WriteLine(
+                            $"PLC Binding SET ERROR " +
+                            $"{address} -> " +
+                            $"{cached.Property.Name}: " +
+                            $"{ex.Message}");
+                    }
+                }
 
                 return true;
             }
@@ -332,14 +421,11 @@ namespace MaterialControlSimulator.Plc
             }
         }
 
-        // ============================================================
+        // =========================================================
         // SET VALUE + WORD COUNT
         //
-        // Binding이 없을 때 String / Array 등의
-        // 고정 영역 크기를 지정할 수 있음.
-        //
-        // Binding이 있으면 Binding.WordCount가 우선.
-        // ============================================================
+        // Binding 없는 String 등에 사용
+        // =========================================================
 
         public bool SetValue(
             string address,
@@ -352,11 +438,8 @@ namespace MaterialControlSimulator.Plc
                 return false;
             }
 
-            CachedBinding? cached =
-                FindCached(address);
-
-            // Binding이 있으면 Binding 설정 사용
-            if (cached != null)
+            // Binding 있으면 Binding WordCount 우선
+            if (HasBinding(address))
             {
                 return SetValue(
                     address,
@@ -378,103 +461,62 @@ namespace MaterialControlSimulator.Plc
                 wordCount);
         }
 
-        // ============================================================
-        // GET VALUE
-        //
-        // Binding 있음:
-        //   Binding DataType / WordCount 기준 Memory Read
-        //
-        // Binding 없음:
-        //   B -> bool
-        //   W -> ushort
-        // ============================================================
-
-        // ============================================================
+        // =========================================================
         // GET VALUE
         //
         // Binding 있음
-        //   -> Binding.DataType / WordCount 자동 사용
+        // -> DataType / WordCount 자동
         //
         // Binding 없음
-        //   -> B = bool
-        //   -> W = ushort
-        // ============================================================
+        // -> B bool / W ushort
+        // =========================================================
 
         public object? GetValue(
             string address)
         {
-            try
+            if (!TryParseAddress(
+                    address,
+                    out char device,
+                    out int deviceAddress))
             {
-                if (!TryParseAddress(
-                        address,
-                        out char device,
-                        out int deviceAddress))
-                {
-                    return null;
-                }
-
-                CachedBinding? cached =
-                    FindCached(address);
-
-                // ====================================================
-                // Binding 있음
-                // ====================================================
-
-                if (cached != null)
-                {
-                    return ReadBoundValue(
-                        device,
-                        deviceAddress,
-                        cached.Binding.DataType,
-                        cached.Binding.WordCount);
-                }
-
-                // ====================================================
-                // Binding 없음
-                //
-                // 타입 정보가 없으므로
-                // 기본 PLC 단위로 반환
-                // ====================================================
-
-                if (device == 'B')
-                {
-                    return _memory.ReadBit(
-                        deviceAddress);
-                }
-
-                if (device == 'W')
-                {
-                    return _memory.ReadWord(
-                        deviceAddress);
-                }
-
                 return null;
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(
-                    $"PLC GetValue ERROR " +
-                    $"{address}: {ex.Message}");
 
-                return null;
+            CachedBinding? cached =
+                FindCached(
+                    address);
+
+            if (cached != null)
+            {
+                return ReadBoundValue(
+                    device,
+                    deviceAddress,
+                    cached.Binding.DataType,
+                    Math.Max(
+                        1,
+                        cached.Binding.WordCount));
             }
+
+            if (device == 'B')
+            {
+                return _memory.ReadBit(
+                    deviceAddress);
+            }
+
+            if (device == 'W')
+            {
+                return _memory.ReadWord(
+                    deviceAddress);
+            }
+
+            return null;
         }
 
-
-        // ============================================================
+        // =========================================================
         // GENERIC GET
         //
-        // Binding이 있어도 T를 명시하면
-        // 요청한 T 기준으로 Memory를 읽음.
-        //
-        // 예:
-        //
-        // GetValue<ushort>("W100")
         // GetValue<int>("W100")
-        // GetValue<uint>("W100")
-        // GetValue<float>("W100")
-        // GetValue<double>("W100")
-        // ============================================================
+        // =========================================================
 
         public T? GetValue<T>(
             string address)
@@ -502,17 +544,11 @@ namespace MaterialControlSimulator.Plc
             }
         }
 
-
-        // ============================================================
+        // =========================================================
         // GENERIC GET + WORD COUNT
         //
-        // String / Array처럼 크기가 필요한 경우.
-        //
-        // 예:
-        //
         // GetValue<string>("W100", 20)
-        // GetValue<ushort[]>("W100", 20)
-        // ============================================================
+        // =========================================================
 
         public T? GetValue<T>(
             string address,
@@ -544,368 +580,9 @@ namespace MaterialControlSimulator.Plc
             }
         }
 
-
-        // ============================================================
-        // GET VALUE + TYPE
-        //
-        // Generic을 사용하기 어려운 곳에서 사용 가능.
-        //
-        // 예:
-        //
-        // GetValue("W100", typeof(int))
-        // GetValue("W100", typeof(string), 20)
-        // ============================================================
-
-        public object? GetValue(
-            string address,
-            Type type)
-        {
-            try
-            {
-                return ReadMemoryValue(
-                    address,
-                    type,
-                    null);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(
-                    $"PLC GetValue ERROR " +
-                    $"{address}: {ex.Message}");
-
-                return null;
-            }
-        }
-
-
-        public object? GetValue(
-            string address,
-            Type type,
-            int wordCount)
-        {
-            if (wordCount <= 0)
-                return null;
-
-            try
-            {
-                return ReadMemoryValue(
-                    address,
-                    type,
-                    wordCount);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(
-                    $"PLC GetValue ERROR " +
-                    $"{address}: {ex.Message}");
-
-                return null;
-            }
-        }
-
-  
-
-        // ============================================================
-        // READ MEMORY VALUE
-        //
-        // Binding 여부와 관계없이
-        // 실제 PLC Memory를 지정된 C# Type으로 해석한다.
-        // ============================================================
-
-        private object? ReadMemoryValue(
-            string address,
-            Type type,
-            int? wordCount)
-        {
-            if (!TryParseAddress(
-                    address,
-                    out char device,
-                    out int deviceAddress))
-            {
-                return null;
-            }
-
-            // ========================================================
-            // BOOL
-            // ========================================================
-
-            if (type == typeof(bool))
-            {
-                if (device == 'B')
-                {
-                    return _memory.ReadBit(
-                        deviceAddress);
-                }
-
-                if (device == 'W')
-                {
-                    return _memory.ReadWord(
-                        deviceAddress) != 0;
-                }
-
-                return null;
-            }
-
-            // B는 bool 이외 타입을 지원하지 않음
-            if (device != 'W')
-                return null;
-
-            // ========================================================
-            // BYTE
-            // ========================================================
-
-            if (type == typeof(byte))
-            {
-                ushort word =
-                    _memory.ReadWord(
-                        deviceAddress);
-
-                return (byte)(
-                    word & 0xFF);
-            }
-
-            // ========================================================
-            // SBYTE
-            // ========================================================
-
-            if (type == typeof(sbyte))
-            {
-                ushort word =
-                    _memory.ReadWord(
-                        deviceAddress);
-
-                return unchecked(
-                    (sbyte)(word & 0xFF));
-            }
-
-            // ========================================================
-            // UINT16
-            // 1 Word
-            // ========================================================
-
-            if (type == typeof(ushort))
-            {
-                return _memory.ReadWord(
-                    deviceAddress);
-            }
-
-            // ========================================================
-            // INT16
-            // 1 Word
-            // ========================================================
-
-            if (type == typeof(short))
-            {
-                return unchecked(
-                    (short)_memory.ReadWord(
-                        deviceAddress));
-            }
-
-            // ========================================================
-            // UINT32
-            // 2 Words
-            // ========================================================
-
-            if (type == typeof(uint))
-            {
-                return _memory.ReadDWord(
-                    deviceAddress);
-            }
-
-            // ========================================================
-            // INT32
-            // 2 Words
-            // ========================================================
-
-            if (type == typeof(int))
-            {
-                return unchecked(
-                    (int)_memory.ReadDWord(
-                        deviceAddress));
-            }
-
-            // ========================================================
-            // FLOAT
-            // 2 Words
-            // ========================================================
-
-            if (type == typeof(float))
-            {
-                uint raw =
-                    _memory.ReadDWord(
-                        deviceAddress);
-
-                return BitConverter.ToSingle(
-                    BitConverter.GetBytes(raw),
-                    0);
-            }
-
-            // ========================================================
-            // UINT64
-            // 4 Words
-            // ========================================================
-
-            if (type == typeof(ulong))
-            {
-                return _memory.ReadQWord(
-                    deviceAddress);
-            }
-
-            // ========================================================
-            // INT64
-            // 4 Words
-            // ========================================================
-
-            if (type == typeof(long))
-            {
-                return unchecked(
-                    (long)_memory.ReadQWord(
-                        deviceAddress));
-            }
-
-            // ========================================================
-            // DOUBLE
-            // 4 Words
-            // ========================================================
-
-            if (type == typeof(double))
-            {
-                ulong raw =
-                    _memory.ReadQWord(
-                        deviceAddress);
-
-                return BitConverter.ToDouble(
-                    BitConverter.GetBytes(raw),
-                    0);
-            }
-
-            // ========================================================
-            // STRING
-            //
-            // 반드시 WordCount 필요
-            // ========================================================
-
-            if (type == typeof(string))
-            {
-                if (!wordCount.HasValue ||
-                    wordCount.Value <= 0)
-                {
-                    throw new ArgumentException(
-                        "String을 읽으려면 WordCount가 필요합니다.");
-                }
-
-                return ReadStringFromMemory(
-                    deviceAddress,
-                    wordCount.Value);
-            }
-
-            // ========================================================
-            // ushort[]
-            // ========================================================
-
-            if (type == typeof(ushort[]))
-            {
-                if (!wordCount.HasValue ||
-                    wordCount.Value <= 0)
-                {
-                    throw new ArgumentException(
-                        "ushort[]를 읽으려면 WordCount가 필요합니다.");
-                }
-
-                ushort[] result =
-                    new ushort[wordCount.Value];
-
-                for (int i = 0;
-                     i < result.Length;
-                     i++)
-                {
-                    result[i] =
-                        _memory.ReadWord(
-                            deviceAddress + i);
-                }
-
-                return result;
-            }
-
-            // ========================================================
-            // short[]
-            // ========================================================
-
-            if (type == typeof(short[]))
-            {
-                if (!wordCount.HasValue ||
-                    wordCount.Value <= 0)
-                {
-                    throw new ArgumentException(
-                        "short[]를 읽으려면 WordCount가 필요합니다.");
-                }
-
-                short[] result =
-                    new short[wordCount.Value];
-
-                for (int i = 0;
-                     i < result.Length;
-                     i++)
-                {
-                    result[i] =
-                        unchecked(
-                            (short)_memory.ReadWord(
-                                deviceAddress + i));
-                }
-
-                return result;
-            }
-
-            // ========================================================
-            // byte[]
-            //
-            // WordCount 기준이므로
-            // 결과 byte 수 = WordCount * 2
-            // ========================================================
-
-            if (type == typeof(byte[]))
-            {
-                if (!wordCount.HasValue ||
-                    wordCount.Value <= 0)
-                {
-                    throw new ArgumentException(
-                        "byte[]를 읽으려면 WordCount가 필요합니다.");
-                }
-
-                byte[] result =
-                    new byte[
-                        wordCount.Value * 2];
-
-                int output = 0;
-
-                for (int i = 0;
-                     i < wordCount.Value;
-                     i++)
-                {
-                    ushort word =
-                        _memory.ReadWord(
-                            deviceAddress + i);
-
-                    result[output++] =
-                        (byte)(
-                            word & 0xFF);
-
-                    result[output++] =
-                        (byte)(
-                            word >> 8);
-                }
-
-                return result;
-            }
-
-            throw new NotSupportedException(
-                $"지원하지 않는 PLC 타입: " +
-                $"{type.Name}");
-        }
-
-        // ============================================================
-        // GET WORDS
-        // ============================================================
+        // =========================================================
+        // RAW WORDS
+        // =========================================================
 
         public ushort[] GetWords(
             string address,
@@ -917,13 +594,11 @@ namespace MaterialControlSimulator.Plc
             if (!TryParseAddress(
                     address,
                     out char device,
-                    out int startAddress))
+                    out int startAddress) ||
+                device != 'W')
             {
                 return Array.Empty<ushort>();
             }
-
-            if (device != 'W')
-                return Array.Empty<ushort>();
 
             ushort[] result =
                 new ushort[wordCount];
@@ -940,10 +615,6 @@ namespace MaterialControlSimulator.Plc
             return result;
         }
 
-        // ============================================================
-        // SET WORDS
-        // ============================================================
-
         public bool SetWords(
             string address,
             ushort[] values)
@@ -957,13 +628,11 @@ namespace MaterialControlSimulator.Plc
             if (!TryParseAddress(
                     address,
                     out char device,
-                    out int startAddress))
+                    out int startAddress) ||
+                device != 'W')
             {
                 return false;
             }
-
-            if (device != 'W')
-                return false;
 
             for (int i = 0;
                  i < values.Length;
@@ -974,10 +643,6 @@ namespace MaterialControlSimulator.Plc
                     values[i]);
             }
 
-            // --------------------------------------------------------
-            // 해당 범위에 Binding이 있다면 Node에도 반영
-            // --------------------------------------------------------
-
             RefreshBindingsInRange(
                 startAddress,
                 values.Length);
@@ -985,9 +650,9 @@ namespace MaterialControlSimulator.Plc
             return true;
         }
 
-        // ============================================================
-        // READ BIT
-        // ============================================================
+        // =========================================================
+        // BIT
+        // =========================================================
 
         public bool ReadBit(
             int address)
@@ -996,14 +661,11 @@ namespace MaterialControlSimulator.Plc
                 address);
         }
 
-        // ============================================================
-        // WRITE BIT
-        // ============================================================
-
         public void WriteBit(
             int address,
             bool value)
         {
+            // Memory는 한 번
             _memory.WriteBit(
                 address,
                 value);
@@ -1011,39 +673,43 @@ namespace MaterialControlSimulator.Plc
             string plcAddress =
                 $"B{address:X}";
 
-            CachedBinding? cached =
-                FindCached(plcAddress);
-
-            if (cached == null)
-                return;
-
-            if (!cached.Property.CanWrite)
-                return;
-
-            try
-            {
-                object? converted =
-                    ConvertFromPlcType(
-                        value,
-                        cached.Binding.DataType,
-                        cached.Property.PropertyType);
-
-                SetNodeProperty(
-                    cached,
-                    converted,
+            List<CachedBinding> bindings =
+                FindCachedAll(
                     plcAddress);
-            }
-            catch (Exception ex)
+
+            foreach (CachedBinding cached
+                     in bindings)
             {
-                Debug.WriteLine(
-                    $"PLC WriteBit ERROR " +
-                    $"{plcAddress}: {ex.Message}");
+                if (!cached.Property.CanWrite)
+                    continue;
+
+                try
+                {
+                    object? converted =
+                        ConvertFromPlcType(
+                            value,
+                            cached.Binding.DataType,
+                            cached.Property.PropertyType);
+
+                    SetTargetProperty(
+                        cached,
+                        converted,
+                        plcAddress);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(
+                        $"PLC WriteBit ERROR " +
+                        $"{plcAddress} -> " +
+                        $"{cached.Property.Name}: " +
+                        $"{ex.Message}");
+                }
             }
         }
 
-        // ============================================================
-        // READ WORD
-        // ============================================================
+        // =========================================================
+        // WORD
+        // =========================================================
 
         public ushort ReadWord(
             int address)
@@ -1051,12 +717,6 @@ namespace MaterialControlSimulator.Plc
             return _memory.ReadWord(
                 address);
         }
-
-        // ============================================================
-        // WRITE WORD
-        //
-        // Raw Memory Write
-        // ============================================================
 
         public void WriteWord(
             int address,
@@ -1067,42 +727,22 @@ namespace MaterialControlSimulator.Plc
                 value);
         }
 
-        // ============================================================
-        // SYNC ALL BINDINGS -> MEMORY
-        // ============================================================
-
-        public void SyncAllBindingsToMemory()
-        {
-            List<string> addresses;
-
-            lock (_bindingLock)
-            {
-                addresses =
-                    _bindings.Keys.ToList();
-            }
-
-            foreach (string address in addresses)
-            {
-                SyncBindingToMemory(
-                    address);
-            }
-        }
-
-        // ============================================================
-        // SYNC ONE BINDING -> MEMORY
-        // ============================================================
+        // =========================================================
+        // BINDING -> MEMORY
+        // =========================================================
 
         public void SyncBindingToMemory(
             string address)
         {
             CachedBinding? cached =
-                FindCached(address);
+                FindCached(
+                    address);
 
-            if (cached == null)
+            if (cached == null ||
+                !cached.Property.CanRead)
+            {
                 return;
-
-            if (!cached.Property.CanRead)
-                return;
+            }
 
             if (!TryParseAddress(
                     address,
@@ -1115,7 +755,7 @@ namespace MaterialControlSimulator.Plc
             try
             {
                 object? value =
-                    GetNodeProperty(
+                    GetTargetProperty(
                         cached);
 
                 if (value == null)
@@ -1133,18 +773,18 @@ namespace MaterialControlSimulator.Plc
                 {
                     _memory.WriteBit(
                         deviceAddress,
-                        Convert.ToBoolean(converted));
-
-                    return;
+                        Convert.ToBoolean(
+                            converted));
                 }
-
-                if (device == 'W')
+                else if (device == 'W')
                 {
                     WriteValueToMemory(
                         deviceAddress,
                         converted,
                         cached.Binding.DataType,
-                        cached.Binding.WordCount);
+                        Math.Max(
+                            1,
+                            cached.Binding.WordCount));
                 }
             }
             catch (Exception ex)
@@ -1155,9 +795,29 @@ namespace MaterialControlSimulator.Plc
             }
         }
 
-        // ============================================================
-        // MC WRITE 후 Binding 갱신
-        // ============================================================
+        public void SyncAllBindingsToMemory()
+        {
+            List<string> addresses;
+
+            lock (_lock)
+            {
+                addresses =
+                    _bindings.Keys.ToList();
+            }
+
+            foreach (string address
+                     in addresses)
+            {
+                SyncBindingToMemory(
+                    address);
+            }
+        }
+
+        // =========================================================
+        // MEMORY -> BINDING
+        //
+        // MC W Write 이후 호출
+        // =========================================================
 
         public void RefreshBindingsInRange(
             int startAddress,
@@ -1171,13 +831,13 @@ namespace MaterialControlSimulator.Plc
                 wordCount -
                 1;
 
-            List<(int Address, CachedBinding Binding)>
-                affected =
-                    new();
+            List<(int Address, CachedBinding Cached)>
+                targets = new();
 
-            lock (_bindingLock)
+            lock (_lock)
             {
-                foreach (var pair in _bindings)
+                foreach (var pair
+                         in _bindings)
                 {
                     if (!TryParseAddress(
                             pair.Key,
@@ -1190,60 +850,59 @@ namespace MaterialControlSimulator.Plc
                     if (device != 'W')
                         continue;
 
-                    // ------------------------------------------------
-                    // Binding 자체가 여러 Word일 수 있으므로
-                    // 영역이 겹치는지도 확인
-                    // ------------------------------------------------
+                    foreach (CachedBinding cached
+                             in pair.Value)
+                    {
+                        int bindingWords =
+                            Math.Max(
+                                1,
+                                cached.Binding.WordCount);
 
-                    int bindingWords =
-                        Math.Max(
-                            1,
-                            pair.Value.Binding.WordCount);
+                        int bindingEnd =
+                            address +
+                            bindingWords -
+                            1;
 
-                    int bindingEnd =
-                        address +
-                        bindingWords -
-                        1;
-
-                    bool overlap =
-                        address <= endAddress &&
-                        bindingEnd >= startAddress;
-
-                    if (!overlap)
-                        continue;
-
-                    affected.Add(
-                        (address, pair.Value));
+                        if (address <= endAddress &&
+                            bindingEnd >= startAddress)
+                        {
+                            targets.Add(
+                                (
+                                    address,
+                                    cached
+                                ));
+                        }
+                    }
                 }
             }
 
-            foreach (var item in
-                     affected.OrderBy(
+            foreach (var item
+                     in targets.OrderBy(
                          x => x.Address))
             {
                 RefreshBinding(
                     item.Address,
-                    item.Binding);
+                    item.Cached);
             }
         }
 
-        // ============================================================
-        // REFRESH ONE BINDING
-        // ============================================================
 
-        public void RefreshBinding(
-            int address)
+        public void RefreshBinding(int address)
         {
-            CachedBinding? cached =
-                FindCached(
-                    $"W{address:X}");
+            string plcAddress =
+                $"W{address:X}";
 
-            if (cached == null)
-                return;
+            List<CachedBinding> bindings =
+                FindCachedAll(
+                    plcAddress);
 
-            RefreshBinding(
-                address,
-                cached);
+            foreach (CachedBinding cached
+                     in bindings)
+            {
+                RefreshBinding(
+                    address,
+                    cached);
+            }
         }
 
         private void RefreshBinding(
@@ -1253,9 +912,6 @@ namespace MaterialControlSimulator.Plc
             if (!cached.Property.CanWrite)
                 return;
 
-            string plcAddress =
-                $"W{address:X}";
-
             try
             {
                 object? value =
@@ -1263,7 +919,9 @@ namespace MaterialControlSimulator.Plc
                         'W',
                         address,
                         cached.Binding.DataType,
-                        cached.Binding.WordCount);
+                        Math.Max(
+                            1,
+                            cached.Binding.WordCount));
 
                 if (value == null)
                     return;
@@ -1274,48 +932,43 @@ namespace MaterialControlSimulator.Plc
                         cached.Binding.DataType,
                         cached.Property.PropertyType);
 
-                SetNodeProperty(
+                SetTargetProperty(
                     cached,
                     converted,
-                    plcAddress);
+                    $"W{address:X}");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(
                     $"PLC Refresh ERROR " +
-                    $"{plcAddress}: {ex.Message}");
+                    $"W{address:X}: {ex.Message}");
             }
         }
 
-        // ============================================================
-        // NODE PROPERTY GET
-        // ============================================================
+        // =========================================================
+        // TARGET PROPERTY GET / SET
+        // =========================================================
 
-        private object? GetNodeProperty(
+        private object? GetTargetProperty(
             CachedBinding cached)
         {
             if (!cached.Property.CanRead)
                 return null;
 
-            if (cached.Node is
-                    DispatcherObject dispatcher &&
+            if (cached.Target is DispatcherObject dispatcher &&
                 !dispatcher.Dispatcher.CheckAccess())
             {
                 return dispatcher.Dispatcher.Invoke(
                     () =>
                         cached.Property.GetValue(
-                            cached.Node));
+                            cached.Target));
             }
 
             return cached.Property.GetValue(
-                cached.Node);
+                cached.Target);
         }
 
-        // ============================================================
-        // NODE PROPERTY SET
-        // ============================================================
-
-        private void SetNodeProperty(
+        private void SetTargetProperty(
             CachedBinding cached,
             object? value,
             string address)
@@ -1323,12 +976,9 @@ namespace MaterialControlSimulator.Plc
             if (!cached.Property.CanWrite)
                 return;
 
-            if (cached.Node is
-                    DispatcherObject dispatcher &&
+            if (cached.Target is DispatcherObject dispatcher &&
                 !dispatcher.Dispatcher.CheckAccess())
             {
-                // 통신 thread를 UI thread 때문에
-                // 기다리게 하지 않음.
                 dispatcher.Dispatcher.BeginInvoke(
                     new Action(
                         () =>
@@ -1336,7 +986,7 @@ namespace MaterialControlSimulator.Plc
                             try
                             {
                                 cached.Property.SetValue(
-                                    cached.Node,
+                                    cached.Target,
                                     value);
                             }
                             catch (Exception ex)
@@ -1352,13 +1002,13 @@ namespace MaterialControlSimulator.Plc
             }
 
             cached.Property.SetValue(
-                cached.Node,
+                cached.Target,
                 value);
         }
 
-        // ============================================================
-        // WRITE BOUND VALUE -> MEMORY
-        // ============================================================
+        // =========================================================
+        // BOUND VALUE -> MEMORY
+        // =========================================================
 
         private void WriteValueToMemory(
             int address,
@@ -1369,7 +1019,6 @@ namespace MaterialControlSimulator.Plc
             string typeName =
                 dataType.ToString();
 
-            // BOOL
             if (typeName.Equals(
                     "Bool",
                     StringComparison.OrdinalIgnoreCase))
@@ -1383,7 +1032,6 @@ namespace MaterialControlSimulator.Plc
                 return;
             }
 
-            // UINT16
             if (typeName.Equals(
                     "UInt16",
                     StringComparison.OrdinalIgnoreCase))
@@ -1395,7 +1043,6 @@ namespace MaterialControlSimulator.Plc
                 return;
             }
 
-            // INT16
             if (typeName.Equals(
                     "Int16",
                     StringComparison.OrdinalIgnoreCase))
@@ -1403,13 +1050,12 @@ namespace MaterialControlSimulator.Plc
                 _memory.WriteWord(
                     address,
                     unchecked(
-                        (ushort)Convert.ToInt16(
-                            value)));
+                        (ushort)
+                        Convert.ToInt16(value)));
 
                 return;
             }
 
-            // UINT32
             if (typeName.Equals(
                     "UInt32",
                     StringComparison.OrdinalIgnoreCase))
@@ -1421,7 +1067,6 @@ namespace MaterialControlSimulator.Plc
                 return;
             }
 
-            // INT32
             if (typeName.Equals(
                     "Int32",
                     StringComparison.OrdinalIgnoreCase))
@@ -1429,13 +1074,12 @@ namespace MaterialControlSimulator.Plc
                 _memory.WriteDWord(
                     address,
                     unchecked(
-                        (uint)Convert.ToInt32(
-                            value)));
+                        (uint)
+                        Convert.ToInt32(value)));
 
                 return;
             }
 
-            // FLOAT
             if (typeName.Equals(
                     "Float",
                     StringComparison.OrdinalIgnoreCase) ||
@@ -1456,7 +1100,6 @@ namespace MaterialControlSimulator.Plc
                 return;
             }
 
-            // DOUBLE
             if (typeName.Equals(
                     "Double",
                     StringComparison.OrdinalIgnoreCase))
@@ -1474,7 +1117,6 @@ namespace MaterialControlSimulator.Plc
                 return;
             }
 
-            // STRING
             if (typeName.Equals(
                     "String",
                     StringComparison.OrdinalIgnoreCase))
@@ -1483,32 +1125,27 @@ namespace MaterialControlSimulator.Plc
                     address,
                     Convert.ToString(value)
                         ?? string.Empty,
-                    Math.Max(
-                        1,
-                        wordCount));
+                    wordCount);
 
                 return;
             }
-
-            throw new NotSupportedException(
-                $"Unsupported PlcDataType : " +
-                $"{dataType}");
         }
 
-        // ============================================================
-        // STRING WRITE
+        // =========================================================
+        // STRING
         //
-        // 중요:
-        // 무조건 WordCount 전체 영역을 덮어씀.
-        // ============================================================
+        // WordCount 전체를 항상 덮어씀
+        // =========================================================
 
         private void WriteStringToMemory(
             int address,
             string value,
             int wordCount)
         {
-            if (wordCount <= 0)
-                return;
+            wordCount =
+                Math.Max(
+                    1,
+                    wordCount);
 
             int capacity =
                 wordCount * 2;
@@ -1535,12 +1172,8 @@ namespace MaterialControlSimulator.Plc
                     copyLength);
             }
 
-            // --------------------------------------------------------
-            // buffer의 남는 부분은 전부 0.
-            //
-            // 따라서 짧은 문자열이나 ""를 넣어도
-            // WordCount 전체가 깨끗하게 지워짐.
-            // --------------------------------------------------------
+            // 남은 buffer는 0
+            // -> 이전 문자열 잔여 영역 제거
 
             for (int i = 0;
                  i < wordCount;
@@ -1560,16 +1193,14 @@ namespace MaterialControlSimulator.Plc
             }
         }
 
-        // ============================================================
-        // STRING READ
-        // ============================================================
-
         private string ReadStringFromMemory(
             int address,
             int wordCount)
         {
-            if (wordCount <= 0)
-                return string.Empty;
+            wordCount =
+                Math.Max(
+                    1,
+                    wordCount);
 
             byte[] bytes =
                 new byte[
@@ -1611,9 +1242,9 @@ namespace MaterialControlSimulator.Plc
                 length);
         }
 
-        // ============================================================
-        // READ BOUND VALUE FROM MEMORY
-        // ============================================================
+        // =========================================================
+        // READ BOUND VALUE
+        // =========================================================
 
         private object? ReadBoundValue(
             char device,
@@ -1654,7 +1285,8 @@ namespace MaterialControlSimulator.Plc
                     StringComparison.OrdinalIgnoreCase))
             {
                 return unchecked(
-                    (short)_memory.ReadWord(
+                    (short)
+                    _memory.ReadWord(
                         address));
             }
 
@@ -1671,7 +1303,8 @@ namespace MaterialControlSimulator.Plc
                     StringComparison.OrdinalIgnoreCase))
             {
                 return unchecked(
-                    (int)_memory.ReadDWord(
+                    (int)
+                    _memory.ReadDWord(
                         address));
             }
 
@@ -1687,7 +1320,8 @@ namespace MaterialControlSimulator.Plc
                         address);
 
                 return BitConverter.ToSingle(
-                    BitConverter.GetBytes(raw),
+                    BitConverter.GetBytes(
+                        raw),
                     0);
             }
 
@@ -1700,7 +1334,8 @@ namespace MaterialControlSimulator.Plc
                         address);
 
                 return BitConverter.ToDouble(
-                    BitConverter.GetBytes(raw),
+                    BitConverter.GetBytes(
+                        raw),
                     0);
             }
 
@@ -1710,17 +1345,15 @@ namespace MaterialControlSimulator.Plc
             {
                 return ReadStringFromMemory(
                     address,
-                    Math.Max(
-                        1,
-                        wordCount));
+                    wordCount);
             }
 
             return null;
         }
 
-        // ============================================================
-        // UNBOUND VALUE WRITE
-        // ============================================================
+        // =========================================================
+        // UNBOUND SET
+        // =========================================================
 
         private bool WriteUnboundValue(
             char device,
@@ -1730,10 +1363,6 @@ namespace MaterialControlSimulator.Plc
         {
             try
             {
-                // ----------------------------------------------------
-                // B
-                // ----------------------------------------------------
-
                 if (device == 'B')
                 {
                     _memory.WriteBit(
@@ -1746,10 +1375,7 @@ namespace MaterialControlSimulator.Plc
                 if (device != 'W')
                     return false;
 
-                // ----------------------------------------------------
-                // 8 BIT
-                // ----------------------------------------------------
-
+                // 8bit
                 if (value is byte u8)
                 {
                     _memory.WriteWord(
@@ -1769,10 +1395,7 @@ namespace MaterialControlSimulator.Plc
                     return true;
                 }
 
-                // ----------------------------------------------------
-                // 16 BIT
-                // ----------------------------------------------------
-
+                // 16bit
                 if (value is ushort u16)
                 {
                     _memory.WriteWord(
@@ -1792,10 +1415,7 @@ namespace MaterialControlSimulator.Plc
                     return true;
                 }
 
-                // ----------------------------------------------------
-                // 32 BIT
-                // ----------------------------------------------------
-
+                // 32bit
                 if (value is uint u32)
                 {
                     _memory.WriteDWord(
@@ -1830,10 +1450,7 @@ namespace MaterialControlSimulator.Plc
                     return true;
                 }
 
-                // ----------------------------------------------------
-                // 64 BIT
-                // ----------------------------------------------------
-
+                // 64bit
                 if (value is ulong u64)
                 {
                     _memory.WriteQWord(
@@ -1868,10 +1485,7 @@ namespace MaterialControlSimulator.Plc
                     return true;
                 }
 
-                // ----------------------------------------------------
-                // STRING
-                // ----------------------------------------------------
-
+                // String
                 if (value is string text)
                 {
                     int count;
@@ -1883,12 +1497,10 @@ namespace MaterialControlSimulator.Plc
                     }
                     else
                     {
-                        // WordCount가 없으면
-                        // 현재 문자열 + NULL이 들어갈 만큼만 확보.
-
                         int byteCount =
-                            Encoding.ASCII.GetByteCount(
-                                text);
+                            Encoding.ASCII
+                                .GetByteCount(
+                                    text);
 
                         count =
                             Math.Max(
@@ -1904,10 +1516,7 @@ namespace MaterialControlSimulator.Plc
                     return true;
                 }
 
-                // ----------------------------------------------------
-                // ushort[]
-                // ----------------------------------------------------
-
+                // Raw words
                 if (value is ushort[] words)
                 {
                     int count =
@@ -1926,8 +1535,7 @@ namespace MaterialControlSimulator.Plc
                             words[i]);
                     }
 
-                    // WordCount를 명시했다면
-                    // 남는 영역 0으로 초기화
+                    // 명시한 나머지 영역 초기화
                     if (wordCount.HasValue)
                     {
                         for (int i = count;
@@ -1948,17 +1556,223 @@ namespace MaterialControlSimulator.Plc
             catch (Exception ex)
             {
                 Debug.WriteLine(
-                    $"PLC Unbound Write ERROR : " +
+                    $"PLC Unbound Set ERROR : " +
                     $"{ex.Message}");
 
                 return false;
             }
         }
 
+        // =========================================================
+        // GENERIC MEMORY READ
+        // =========================================================
 
-        // ============================================================
-        // CONVERT TO PLC TYPE
-        // ============================================================
+        private object? ReadMemoryValue(
+            string address,
+            Type type,
+            int? wordCount)
+        {
+            if (!TryParseAddress(
+                    address,
+                    out char device,
+                    out int deviceAddress))
+            {
+                return null;
+            }
+
+            // bool
+            if (type == typeof(bool))
+            {
+                if (device == 'B')
+                {
+                    return _memory.ReadBit(
+                        deviceAddress);
+                }
+
+                if (device == 'W')
+                {
+                    return _memory.ReadWord(
+                        deviceAddress) != 0;
+                }
+
+                return null;
+            }
+
+            if (device != 'W')
+                return null;
+
+            // 8bit
+            if (type == typeof(byte))
+            {
+                return (byte)(
+                    _memory.ReadWord(
+                        deviceAddress)
+                    & 0xFF);
+            }
+
+            if (type == typeof(sbyte))
+            {
+                return unchecked(
+                    (sbyte)(
+                        _memory.ReadWord(
+                            deviceAddress)
+                        & 0xFF));
+            }
+
+            // 16bit
+            if (type == typeof(ushort))
+            {
+                return _memory.ReadWord(
+                    deviceAddress);
+            }
+
+            if (type == typeof(short))
+            {
+                return unchecked(
+                    (short)
+                    _memory.ReadWord(
+                        deviceAddress));
+            }
+
+            // 32bit
+            if (type == typeof(uint))
+            {
+                return _memory.ReadDWord(
+                    deviceAddress);
+            }
+
+            if (type == typeof(int))
+            {
+                return unchecked(
+                    (int)
+                    _memory.ReadDWord(
+                        deviceAddress));
+            }
+
+            if (type == typeof(float))
+            {
+                uint raw =
+                    _memory.ReadDWord(
+                        deviceAddress);
+
+                return BitConverter.ToSingle(
+                    BitConverter.GetBytes(
+                        raw),
+                    0);
+            }
+
+            // 64bit
+            if (type == typeof(ulong))
+            {
+                return _memory.ReadQWord(
+                    deviceAddress);
+            }
+
+            if (type == typeof(long))
+            {
+                return unchecked(
+                    (long)
+                    _memory.ReadQWord(
+                        deviceAddress));
+            }
+
+            if (type == typeof(double))
+            {
+                ulong raw =
+                    _memory.ReadQWord(
+                        deviceAddress);
+
+                return BitConverter.ToDouble(
+                    BitConverter.GetBytes(
+                        raw),
+                    0);
+            }
+
+            // String
+            if (type == typeof(string))
+            {
+                if (!wordCount.HasValue ||
+                    wordCount.Value <= 0)
+                {
+                    throw new ArgumentException(
+                        "String GetValue requires WordCount.");
+                }
+
+                return ReadStringFromMemory(
+                    deviceAddress,
+                    wordCount.Value);
+            }
+
+            // ushort[]
+            if (type == typeof(ushort[]))
+            {
+                if (!wordCount.HasValue ||
+                    wordCount.Value <= 0)
+                {
+                    throw new ArgumentException(
+                        "ushort[] GetValue requires WordCount.");
+                }
+
+                ushort[] result =
+                    new ushort[
+                        wordCount.Value];
+
+                for (int i = 0;
+                     i < result.Length;
+                     i++)
+                {
+                    result[i] =
+                        _memory.ReadWord(
+                            deviceAddress + i);
+                }
+
+                return result;
+            }
+
+            // byte[]
+            if (type == typeof(byte[]))
+            {
+                if (!wordCount.HasValue ||
+                    wordCount.Value <= 0)
+                {
+                    throw new ArgumentException(
+                        "byte[] GetValue requires WordCount.");
+                }
+
+                byte[] result =
+                    new byte[
+                        wordCount.Value * 2];
+
+                int output = 0;
+
+                for (int i = 0;
+                     i < wordCount.Value;
+                     i++)
+                {
+                    ushort word =
+                        _memory.ReadWord(
+                            deviceAddress + i);
+
+                    result[output++] =
+                        (byte)(
+                            word & 0xFF);
+
+                    result[output++] =
+                        (byte)(
+                            word >> 8);
+                }
+
+                return result;
+            }
+
+            throw new NotSupportedException(
+                $"Unsupported PLC Type : " +
+                $"{type.Name}");
+        }
+
+        // =========================================================
+        // CONVERT PROPERTY -> PLC TYPE
+        // =========================================================
 
         private object? ConvertToPlcType(
             object? value,
@@ -1967,13 +1781,13 @@ namespace MaterialControlSimulator.Plc
             if (value == null)
                 return null;
 
-            string typeName =
+            string name =
                 dataType.ToString();
 
-            if (typeName.Equals(
+            if (name.Equals(
                     "Float",
                     StringComparison.OrdinalIgnoreCase) ||
-                typeName.Equals(
+                name.Equals(
                     "Single",
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -2009,9 +1823,9 @@ namespace MaterialControlSimulator.Plc
             };
         }
 
-        // ============================================================
-        // CONVERT FROM PLC TYPE
-        // ============================================================
+        // =========================================================
+        // CONVERT PLC -> PROPERTY TYPE
+        // =========================================================
 
         private object? ConvertFromPlcType(
             object? value,
@@ -2028,8 +1842,7 @@ namespace MaterialControlSimulator.Plc
                 }
 
                 throw new InvalidOperationException(
-                    $"'{propertyType.Name}' " +
-                    $"cannot be null.");
+                    $"{propertyType.Name} cannot be null.");
             }
 
             Type targetType =
@@ -2044,13 +1857,13 @@ namespace MaterialControlSimulator.Plc
                     value);
             }
 
-            string typeName =
+            string name =
                 dataType.ToString();
 
-            if (typeName.Equals(
+            if (name.Equals(
                     "Float",
                     StringComparison.OrdinalIgnoreCase) ||
-                typeName.Equals(
+                name.Equals(
                     "Single",
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -2064,14 +1877,19 @@ namespace MaterialControlSimulator.Plc
                 targetType);
         }
 
-        // ============================================================
+        // =========================================================
         // ADDRESS
         //
-        // B/W 주소는 HEX 기준
-        //
-        // W200 -> 0x200
-        // B3000 -> 0x3000
-        // ============================================================
+        // B/W 주소는 HEX
+        // =========================================================
+
+        private static string NormalizeAddress(
+            string address)
+        {
+            return address
+                .Trim()
+                .ToUpperInvariant();
+        }
 
         private static bool TryParseAddress(
             string address,
@@ -2088,9 +1906,12 @@ namespace MaterialControlSimulator.Plc
                 return false;
             }
 
+            string normalized =
+                NormalizeAddress(
+                    address);
+
             device =
-                char.ToUpperInvariant(
-                    address[0]);
+                normalized[0];
 
             if (device != 'B' &&
                 device != 'W')
@@ -2099,13 +1920,14 @@ namespace MaterialControlSimulator.Plc
             }
 
             return int.TryParse(
-                address[1..],
+                normalized[1..],
                 NumberStyles.HexNumber,
                 CultureInfo.InvariantCulture,
                 out deviceAddress);
         }
     }
 }
+
 
 
 

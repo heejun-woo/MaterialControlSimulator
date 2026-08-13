@@ -12,20 +12,18 @@ namespace MaterialControlSimulator.Plc.Logic
         private bool _lastRequest;
         private DateTime _lastRequestTime;
 
-        public void Scan(
-            PlcMemory memory)
+        public void Scan(PlcBindingManager manager)
         {
-            bool request =
-                memory.ReadBit(0x3000);
+            bool request = manager.ReadBit(0x3000);
 
             // Rising Edge
             if (request != _lastRequest)
             {
-                memory.WriteBit(0x3800, request);
+                manager.WriteBit(0x3800, request);
 
 
-                memory.WriteBit(0x3808, true);
-                memory.WriteBit(0x3809, false);
+                manager.WriteBit(0x3808, true);
+                manager.WriteBit(0x3809, false);
 
                 _lastRequestTime = DateTime.Now;
                 _lastRequest = request;
@@ -34,8 +32,8 @@ namespace MaterialControlSimulator.Plc.Logic
             // Timeout
             if ((DateTime.Now - _lastRequestTime).TotalSeconds > 10)
             {
-                memory.WriteBit(0x3808, false);
-                memory.WriteBit(0x3809, true);
+                manager.WriteBit(0x3808, false);
+                manager.WriteBit(0x3809, true);
             }
         }
     }

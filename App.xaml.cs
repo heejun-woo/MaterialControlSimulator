@@ -20,10 +20,10 @@ namespace MaterialControlSimulator
         public static NodeManager NodeManager { get; } = new();
 
         public static PlcMemory plcMemory = new PlcMemory();
-        public static PlcBindingManager PlcBindingManager { get; } = new PlcBindingManager(Nodes, plcMemory);
+        public static PlcBindingManager PlcBindingManager { get; } = new PlcBindingManager(plcMemory);
         public static McProtocolServer PlcServer { get; } = new McProtocolServer(plcMemory, PlcBindingManager);
 
-        public static PlcScanEngine scanEngine = new PlcScanEngine(plcMemory);
+        public static PlcScanEngine scanEngine = new PlcScanEngine(PlcBindingManager);
 
 
         public App()

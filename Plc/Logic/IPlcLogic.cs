@@ -8,6 +8,6 @@ namespace MaterialControlSimulator.Plc.Logic
 {
     public interface IPlcLogic
     {
-        void Scan(PlcMemory memory);
+        void Scan(PlcBindingManager manager);
     }
 }

@@ -9,7 +9,7 @@ namespace MaterialControlSimulator.Plc.Logic
 {
     public class PlcScanEngine
     {
-        private readonly PlcMemory _memory;
+        private readonly PlcBindingManager _manager;
         private readonly List<IPlcLogic> _logics = new();
 
         private CancellationTokenSource? _cts;
@@ -21,10 +21,9 @@ namespace MaterialControlSimulator.Plc.Logic
             _scanTask != null &&
             !_scanTask.IsCompleted;
 
-        public PlcScanEngine(
-            PlcMemory memory)
+        public PlcScanEngine(PlcBindingManager manager)
         {
-            _memory = memory;
+            _manager = manager;
         }
 
         public void AddLogic(
@@ -57,7 +56,7 @@ namespace MaterialControlSimulator.Plc.Logic
                     foreach (var logic in _logics)
                     {
                         logic.Scan(
-                            _memory);
+                            _manager);
                     }
                 }
                 catch (Exception ex)
@@ -98,6 +97,7 @@ namespace MaterialControlSimulator.Plc.Logic
             }
 
             _cts.Dispose();
+
             _cts = null;
             _scanTask = null;
         }

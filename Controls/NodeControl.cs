@@ -13,7 +13,7 @@ using System.Windows.Input;
 namespace MaterialControlSimulator.Controls
 {
 
-    public class NodeControl : UserControl, INode
+    public class NodeControl : UserControl, INode, IPlcBindable
     {
         #region 그외
         public static readonly DependencyProperty IdProperty =

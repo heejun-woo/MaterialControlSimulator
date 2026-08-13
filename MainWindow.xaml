@@ -24,7 +24,8 @@
         <!-- 툴바 -->
         <ToolBarTray DockPanel.Dock="Top">
             <ToolBar>
-
+                <local:CommunicationStatusControl x:Name="CommStatus" Width="140" Height="50"/>
+                
                 <Button Content="▶ Start" Click="Start_Click"/>
                 <Button Content="⏸ Pause" Click="Pause_Click"/>
 

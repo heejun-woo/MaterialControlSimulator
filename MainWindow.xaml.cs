@@ -89,6 +89,8 @@ namespace MaterialControlSimulator
             RefreshEquipmentTree();
 
             // Node / 프로젝트 로딩 완료
+            App.PlcBindingManager.Register(CommStatus);
+            App.PlcBindingManager.Register(Port01);
             App.PlcBindingManager.RebuildCache();
             // 그 다음 MC Server 시작
             PlcStart(5000);
@@ -215,7 +217,7 @@ namespace MaterialControlSimulator
             App.PlcBindingManager.SetValue("W100", "ABCDrtr23");
             App.PlcBindingManager.SetValue("W300", "TTTTT");
 
-            Logger.Info(App.PlcBindingManager.GetValue<string>("W300", 10));
+            Logger.Info(App.PlcBindingManager.GetValue<string>("W100", 10));
         }
 
         private void ZoomOut(object sender, RoutedEventArgs e)
@@ -223,10 +225,10 @@ namespace MaterialControlSimulator
             SetZoom(_zoom - 0.1);
 
             //App.PlcBindingManager.SetValue("B100", false);
-            App.PlcBindingManager.SetValue("W100", "");
+            App.PlcBindingManager.SetValue("W100", "", 16);
 
-            ushort[] words =App.PlcBindingManager.GetWords("W300",10);
-            Logger.Info(words.ToString());
+
+            Logger.Info(App.PlcBindingManager.GetValue<string>("W100", 10));
         }
 
         private void ZoomReset(object sender, RoutedEventArgs e)
@@ -328,7 +330,15 @@ namespace MaterialControlSimulator
 
             Port01.PlcBindings.Add(new PlcBinding
             {
-                PropertyName = "PortState",
+                PropertyName = "PortStatus",
+                Address = "W200",
+                DataType = PlcDataType.UInt16
+            });
+
+
+            Port01.PlcBindings.Add(new PlcBinding
+            {
+                PropertyName = "PortStatus",
                 Address = "W200",
                 DataType = PlcDataType.UInt16
             });
