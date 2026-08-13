@@ -976,34 +976,40 @@ namespace MaterialControlSimulator.Plc
             if (!cached.Property.CanWrite)
                 return;
 
+            void SetIfChanged()
+            {
+                try
+                {
+                    object? current =
+                        cached.Property.CanRead
+                            ? cached.Property.GetValue(cached.Target)
+                            : null;
+
+                    // 동일하면 UI 갱신 안 함
+                    if (Equals(current, value))
+                        return;
+
+                    cached.Property.SetValue(
+                        cached.Target,
+                        value);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(
+                        $"PLC UI SET ERROR {address}: {ex.Message}");
+                }
+            }
+
             if (cached.Target is DispatcherObject dispatcher &&
                 !dispatcher.Dispatcher.CheckAccess())
             {
                 dispatcher.Dispatcher.BeginInvoke(
-                    new Action(
-                        () =>
-                        {
-                            try
-                            {
-                                cached.Property.SetValue(
-                                    cached.Target,
-                                    value);
-                            }
-                            catch (Exception ex)
-                            {
-                                Debug.WriteLine(
-                                    $"PLC UI SET ERROR " +
-                                    $"{address}: " +
-                                    $"{ex.Message}");
-                            }
-                        }));
-
-                return;
+                    new Action(SetIfChanged));
             }
-
-            cached.Property.SetValue(
-                cached.Target,
-                value);
+            else
+            {
+                SetIfChanged();
+            }
         }
 
         // =========================================================

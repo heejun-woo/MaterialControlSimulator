@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,6 +29,8 @@ namespace MaterialControlSimulator.Controls
                typeof(string),
                typeof(CarrierControl));
 
+        private readonly TranslateTransform _moveTransform = new TranslateTransform();
+
         public string Id
         {
             get => (string)GetValue(IdProperty);
@@ -40,6 +43,8 @@ namespace MaterialControlSimulator.Controls
         public CarrierControl()
         {
             InitializeComponent();
+            RenderTransform = _moveTransform;
+
             Loaded += CarrierControl_Loaded;
         }
 
@@ -49,45 +54,17 @@ namespace MaterialControlSimulator.Controls
             App.CarrierManager.Register(this);
         }
 
-        public async Task MoveToAsync(NodeControl node)
+        public Task MoveToAsync(NodeControl node)
         {
             var target = GetNodePosition(node);
 
-            var startX = Canvas.GetLeft(this);
-            var startY = Canvas.GetTop(this);
-
-            if (double.IsNaN(startX))
-                startX = 0;
-
-            if (double.IsNaN(startY))
-                startY = 0;
-
-            var duration = TimeSpan.FromMilliseconds(500);
-
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-            while (stopwatch.Elapsed < duration)
-            {
-                var progress =
-                    stopwatch.Elapsed.TotalMilliseconds /
-                    duration.TotalMilliseconds;
-
-                progress = Math.Min(progress, 1.0);
-
-                Canvas.SetLeft(
-                    this,
-                    startX + (target.X - startX) * progress);
-
-                Canvas.SetTop(
-                    this,
-                    startY + (target.Y - startY) * progress);
-
-                await Task.Delay(16);
-            }
-
-            Canvas.SetLeft(this, target.X);
-            Canvas.SetTop(this, target.Y);
+            return App.CarrierManager.MoveToAsync(
+                this,
+                target.X,
+                target.Y,
+                500);
         }
+
 
 
         public void SetPosition(NodeControl node)
