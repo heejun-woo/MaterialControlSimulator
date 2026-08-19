@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace MaterialControlSimulator
 {
@@ -68,6 +69,8 @@ namespace MaterialControlSimulator
                 }
                 session.IsRunning = true;
 
+                await Task.Delay(1000); // 지연대기
+
                 var carrier = session.Carrier;
                 var currentNode = carrier.CurrentNode;
 
@@ -110,6 +113,8 @@ namespace MaterialControlSimulator
                 currentNode.Leave();
 
                 // 현재 노드 변경
+
+                App.CarrierHistory.Add(carrier.Id, carrier.CurrentNode.Id, nextNode.Id, "MOVE");
                 carrier.CurrentNode = nextNode;
 
                 // 실제 이동

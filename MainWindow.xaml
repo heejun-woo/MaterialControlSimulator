@@ -36,9 +36,10 @@
                 <Button Content="-" Click="ZoomOut"/>
                 
                 <Separator/>
-                
+
                 <Button Content="Carrier 생성" Click="CreateCarrier_Click"/>
                 <Button Content="Carrier 목적지 지정" Click="SetCarrierDestination_Click"/>
+                <Button Content="Carrier 이력 조회" Click="CarrierHistoryWindows_Click"/>
 
             </ToolBar>
         </ToolBarTray>

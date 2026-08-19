@@ -161,6 +161,7 @@ namespace MaterialControlSimulator
         #region 메뉴 이벤트
         private async void Start_Click(object sender, RoutedEventArgs e)
         {
+            if (_simulation == null) return;
 
             _simulation._running = true;
 
@@ -192,6 +193,17 @@ namespace MaterialControlSimulator
         private async void SetCarrierDestination_Click(object sender, RoutedEventArgs e)
         {
             var window = new CarrierDestinationWindow(_simulation)
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+
+        }
+
+        private async void CarrierHistoryWindows_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CarrierHistoryWindow()
             {
                 Owner = this
             };

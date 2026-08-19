@@ -24,7 +24,7 @@ namespace MaterialControlSimulator
         public static McProtocolServer PlcServer { get; } = new McProtocolServer(plcMemory, PlcBindingManager);
 
         public static PlcScanEngine scanEngine = new PlcScanEngine(PlcBindingManager);
-
+        public static CarrierHistoryManager CarrierHistory { get; } = new CarrierHistoryManager();
 
         public App()
         {
