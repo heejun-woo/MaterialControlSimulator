@@ -1,0 +1,225 @@
+﻿<local:NodeControl
+    x:Class="MaterialControlSimulator.Controls.CarrierProcessControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:MaterialControlSimulator.Controls"   
+    Width="80"
+    Height="80">
+    <Grid>
+        <Border
+            CornerRadius="8"
+            Background="#202830"
+            BorderThickness="2">
+
+            <Border.Style>
+                <Style TargetType="Border">
+                    <!-- OFF -->
+                    <Setter Property="BorderBrush"
+                            Value="#53606C"/>
+                    <Setter Property="Opacity"
+                            Value="0.70"/>
+
+                    <Style.Triggers>
+                        <!-- ON -->
+                        <DataTrigger
+                            Binding="{Binding IsProcessEnabled,
+                                RelativeSource={RelativeSource AncestorType=local:CarrierProcessControl}}"
+                            Value="True">
+
+                            <Setter Property="BorderBrush"
+                                    Value="#00DFA2"/>
+                            <Setter Property="Opacity"
+                                    Value="1"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+
+            <Grid Margin="7">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="20"/>
+                </Grid.RowDefinitions>
+
+                <!-- 상단 -->
+                <Grid Grid.Row="0">
+
+                    <TextBlock
+                        Text="PROCESS"
+                        Foreground="#AAB5BD"
+                        FontSize="9"
+                        FontWeight="Bold"
+                        VerticalAlignment="Center"/>
+
+                    <!-- ON / OFF -->
+                    <ToggleButton
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Width="27"
+                        Height="27"
+                        Padding="0"
+                        Cursor="Hand"
+                        IsChecked="{Binding IsProcessEnabled,
+                            RelativeSource={RelativeSource AncestorType=local:CarrierProcessControl},
+                            Mode=TwoWay}">
+
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+
+                                <Grid>
+                                    <Ellipse
+                                        x:Name="PowerBackground"
+                                        Fill="#242D34"
+                                        Stroke="#6A747C"
+                                        StrokeThickness="2"/>
+
+                                    <TextBlock
+                                        x:Name="PowerIcon"
+                                        Text="⏻"
+                                        Foreground="#89949C"
+                                        FontSize="18"
+                                        FontWeight="Bold"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Margin="0,-2,0,0"/>
+                                </Grid>
+
+                                <ControlTemplate.Triggers>
+
+                                    <Trigger
+                                        Property="IsChecked"
+                                        Value="True">
+
+                                        <Setter
+                                            TargetName="PowerBackground"
+                                            Property="Fill"
+                                            Value="#074438"/>
+
+                                        <Setter
+                                            TargetName="PowerBackground"
+                                            Property="Stroke"
+                                            Value="#00E6A2"/>
+
+                                        <Setter
+                                            TargetName="PowerIcon"
+                                            Property="Foreground"
+                                            Value="#00FFB3"/>
+                                    </Trigger>
+
+                                    <Trigger
+                                        Property="IsMouseOver"
+                                        Value="True">
+
+                                        <Setter
+                                            TargetName="PowerBackground"
+                                            Property="StrokeThickness"
+                                            Value="3"/>
+                                    </Trigger>
+
+                                </ControlTemplate.Triggers>
+
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+
+                    </ToggleButton>
+
+                </Grid>
+
+                <!-- 중앙 LOAD / EMPTY -->
+                <Grid Grid.Row="1">
+
+                    <Ellipse
+                        Width="46"
+                        Height="46"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        StrokeThickness="2">
+
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+
+                                <!-- LOAD -->
+                                <Setter Property="Stroke"
+                                        Value="#FFB300"/>
+                                <Setter Property="Fill"
+                                        Value="#3A2B08"/>
+
+                                <Style.Triggers>
+
+                                    <!-- EMPTY -->
+                                    <DataTrigger
+                                        Binding="{Binding SetEmpty,
+                                            RelativeSource={RelativeSource AncestorType=local:CarrierProcessControl}}"
+                                        Value="True">
+
+                                        <Setter Property="Stroke"
+                                                Value="#00B8D4"/>
+                                        <Setter Property="Fill"
+                                                Value="#092E35"/>
+
+                                    </DataTrigger>
+
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+
+                    </Ellipse>
+
+                    <TextBlock
+                        FontSize="10"
+                        FontWeight="Bold"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+
+                                <!-- LOAD -->
+                                <Setter Property="Text"
+                                        Value="LOAD"/>
+                                <Setter Property="Foreground"
+                                        Value="#FFD15C"/>
+
+                                <Style.Triggers>
+
+                                    <!-- EMPTY -->
+                                    <DataTrigger
+                                        Binding="{Binding SetEmpty,
+                                            RelativeSource={RelativeSource AncestorType=local:CarrierProcessControl}}"
+                                        Value="True">
+
+                                        <Setter Property="Text"
+                                                Value="EMPTY"/>
+                                        <Setter Property="Foreground"
+                                                Value="#5DE7F5"/>
+
+                                    </DataTrigger>
+
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+
+                    </TextBlock>
+
+                </Grid>
+
+                <!-- ID -->
+                <TextBlock
+                    Grid.Row="2"
+                    Text="{Binding Id,
+                        RelativeSource={RelativeSource AncestorType=local:CarrierProcessControl}}"
+                    Foreground="White"
+                    FontSize="10"
+                    FontWeight="Bold"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"/>
+
+            </Grid>
+
+        </Border>
+
+    </Grid>
+
+</local:NodeControl>

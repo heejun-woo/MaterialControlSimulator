@@ -25,6 +25,7 @@ namespace MaterialControlSimulator
 
         public static PlcScanEngine scanEngine = new PlcScanEngine(PlcBindingManager);
         public static CarrierHistoryManager CarrierHistory { get; } = new CarrierHistoryManager();
+        public static CarrierRouteManager _routeManager { get; } = new(CarrierManager, Nodes);
 
         public App()
         {

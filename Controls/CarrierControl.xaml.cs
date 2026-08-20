@@ -36,7 +36,19 @@ namespace MaterialControlSimulator.Controls
             get => (string)GetValue(IdProperty);
             set => SetValue(IdProperty, value);
         }
-        public bool IsNotEmpty { get; private set; } = true;
+
+        public static readonly DependencyProperty EmptyProperty =
+            DependencyProperty.Register(
+        nameof(IsNotEmpty),
+        typeof(bool),
+        typeof(CarrierControl),
+        new PropertyMetadata(false));
+
+        public bool IsNotEmpty
+        {
+            get => (bool)GetValue(EmptyProperty);
+            set => SetValue(EmptyProperty, value);
+        }
 
         public NodeControl? CurrentNode { get; set; }
 
@@ -54,15 +66,26 @@ namespace MaterialControlSimulator.Controls
             App.CarrierManager.Register(this);
         }
 
-        public Task MoveToAsync(NodeControl node)
+        public async Task MoveToAsync(NodeControl node)
         {
-            var target = GetNodePosition(node);
+            // 1. 먼저 해당 Node까지 실제 이동
+            var target =
+                GetNodePosition(node);
 
-            return App.CarrierManager.MoveToAsync(
+            await App.CarrierManager.MoveToAsync(
                 this,
                 target.X,
                 target.Y,
                 500);
+
+            // 2. 도착 위치 확정
+            CurrentNode = node;
+
+            // 3. Process 노드라면 도착 후 처리
+            if (node is CarrierProcessControl process)
+            {
+                await process.ProcessAsync(this);
+            }
         }
 
 

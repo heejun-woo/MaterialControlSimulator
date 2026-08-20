@@ -172,9 +172,11 @@
                                 Canvas.Left="460"               
                                 Canvas.Top="200"/>
 
-                            <local:LocationControl          
+                            <local:CarrierProcessControl          
                                 x:Name="Loc05"                  
-                                Id="Loc05"                 
+                                Id="Loc05"
+                                SetEmpty="True"
+                                NextNodeId="Loc06"
                                 Canvas.Left="580"               
                                 Canvas.Top="200"/>
 
@@ -214,9 +216,11 @@
                                 Canvas.Left="100"               
                                 Canvas.Top="400"/>
 
-                            <local:LocationControl          
+                            <local:CarrierProcessControl          
                                 x:Name="Loc12"                  
-                                Id="Loc12"                 
+                                Id="Loc12" 
+                                SetEmpty="False"
+                                NextNodeId="Loc01"
                                 Canvas.Left="100"               
                                 Canvas.Top="300"/>
 

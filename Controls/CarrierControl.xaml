@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:MaterialControlSimulator.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="50" d:DesignWidth="40">
+             Width="60" Height="60" IsHitTestVisible="False">
     <Grid>
 
         <!-- Carrier 본체 -->
@@ -81,7 +81,7 @@
                                             Binding="{Binding IsNotEmpty,
                                                 RelativeSource={
                                                     RelativeSource AncestorType=UserControl}}"
-                                            Value="True">
+                                            Value="false">
 
                                             <Setter Property="Visibility"
                                                     Value="Visible"/>
