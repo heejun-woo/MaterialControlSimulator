@@ -254,6 +254,11 @@ namespace MaterialControlSimulator
         {
             var groups = new ObservableCollection<EquipmentGroup>();
 
+            var process = new EquipmentGroup
+            {
+                Name = "Job Location"
+            };
+
             var locations = new EquipmentGroup
             {
                 Name = "Location"
@@ -266,7 +271,11 @@ namespace MaterialControlSimulator
 
             foreach (var node in App.Nodes.GetAll())
             {
-                if (node is LocationControl)
+                if (node is CarrierProcessControl)
+                {
+                    process.Items.Add(node);
+                }
+                else if (node is LocationControl)
                 {
                     locations.Items.Add(node);
                 }
@@ -275,6 +284,8 @@ namespace MaterialControlSimulator
                     ports.Items.Add(node);
                 }
             }
+            if (process.Items.Count > 0)
+                groups.Add(process);
 
             if (locations.Items.Count > 0)
                 groups.Add(locations);
