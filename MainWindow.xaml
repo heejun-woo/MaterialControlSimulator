@@ -1,8 +1,12 @@
-﻿<Window xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"  xmlns:MaterialControlSimulator="clr-namespace:MaterialControlSimulator"  xmlns:local="clr-namespace:MaterialControlSimulator.Controls" 
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:av="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="av"
-    x:Class="MaterialControlSimulator.MainWindow"
+﻿<Window xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"  
+        xmlns:MaterialControlSimulator="clr-namespace:MaterialControlSimulator"  
+        xmlns:local="clr-namespace:MaterialControlSimulator.Controls" 
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:av="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        mc:Ignorable="av"
+        x:Class="MaterialControlSimulator.MainWindow"
         Title="Material Control Simulator"
         Width="1700"
         Height="900"
@@ -124,111 +128,17 @@
                     <ScrollViewer x:Name="SimulationScrollViewer"
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto">
-
                         <Canvas x:Name="SimulationCanvas"               
-                            Width="3000"              
-                            Height="3000"                
-                            Background="#2B2B2B">
-                            
+                              Width="3000"              
+                              Height="3000"                
+                              Background="#2B2B2B">
+
                             <Canvas.LayoutTransform>
                                 <ScaleTransform x:Name="SimulationScale"
-                                    ScaleX="1"
-                                    ScaleY="1"/>
+                                          ScaleX="1"
+                                          ScaleY="1"/>
                             </Canvas.LayoutTransform>
-                            
-                            <local:PortControl           
-                                x:Name="Port01"                
-                                Id="Port01"               
-                                Canvas.Left="110"       
-                                Canvas.Top="120"/>
-
-                            <local:PortControl           
-                                x:Name="Port02"                
-                                Id="Port02"               
-                                Canvas.Left="590"       
-                                Canvas.Top="500"/>
-
-                            <local:LocationControl           
-                                x:Name="Loc01"                
-                                Id="Loc01"               
-                                Canvas.Left="100"       
-                                Canvas.Top="200"/>
-
-                            <local:LocationControl     
-                                x:Name="Loc02" 
-                                Id="Loc02"               
-                                Canvas.Left="220"   
-                                Canvas.Top="200"/>
-
-                            <local:LocationControl                
-                                x:Name="Loc03"                 
-                                Id="Loc03"       
-                                Canvas.Left="340"       
-                                Canvas.Top="200"/>
-
-                            <local:LocationControl           
-                                x:Name="Loc04"                  
-                                Id="Loc04"                 
-                                Canvas.Left="460"               
-                                Canvas.Top="200"/>
-
-                            <local:CarrierProcessControl          
-                                x:Name="Loc05"                  
-                                Id="Loc05"
-                                SetEmpty="True"
-                                NextNodeId="Loc06"
-                                Canvas.Left="580"               
-                                Canvas.Top="200"/>
-
-                            <local:LocationControl          
-                                x:Name="Loc06"                  
-                                Id="Loc06"                 
-                                Canvas.Left="580"               
-                                Canvas.Top="300"/>
-
-                            <local:LocationControl          
-                                x:Name="Loc07"                  
-                                Id="Loc07"                 
-                                Canvas.Left="580"               
-                                Canvas.Top="400"/>
-
-                            <local:LocationControl          
-                                x:Name="Loc08"                  
-                                Id="Loc08"                 
-                                Canvas.Left="460"               
-                                Canvas.Top="400"/>
-
-                            <local:LocationControl          
-                                x:Name="Loc09"                  
-                                Id="Loc09"                 
-                                Canvas.Left="340"               
-                                Canvas.Top="400"/>
-
-                            <local:LocationControl          
-                                x:Name="Loc10"                  
-                                Id="Loc10"                 
-                                Canvas.Left="220"               
-                                Canvas.Top="400"/>
-
-                            <local:LocationControl          
-                                x:Name="Loc11"                  
-                                Id="Loc11"                 
-                                Canvas.Left="100"               
-                                Canvas.Top="400"/>
-
-                            <local:CarrierProcessControl          
-                                x:Name="Loc12"                  
-                                Id="Loc12" 
-                                SetEmpty="False"
-                                NextNodeId="Loc01"
-                                Canvas.Left="100"               
-                                Canvas.Top="300"/>
-
-                            <local:CarrierControl                    
-                                x:Name="Carrier01"                           
-                                Id="C01"      
-                                Canvas.Left="0"     
-                                Canvas.Top="200"/>
+                            <ContentControl x:Name="SimulationHost" />
 
                         </Canvas>
 

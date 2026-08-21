@@ -1,8 +1,10 @@
 ﻿using MaterialControlSimulator.Controls;
 using MaterialControlSimulator.Plc;
+using System;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics;
+using System.Net.Mime;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,83 +26,31 @@ namespace MaterialControlSimulator
     /// </summary>
     public partial class MainWindow : Window
     {
-        SimulationManager _simulation; 
-        private LayoutManager _layoutManager; 
+        public SimulationManager _simulation; 
 
         public ObservableCollection<PropertyItem> Properties { get; } = new();
+
+        private readonly SimulationType.SampleType sample = new SimulationType.SampleType();
 
         public MainWindow()
         {
             InitializeComponent();
 
-            _layoutManager = new LayoutManager();
-            _layoutManager.LoadComplete += LayoutManager_LoadComplete;
+            SimulationHost.Content = sample;
+
             PropertyGrid.ItemsSource = Properties;
 
             DataContext = new MainViewModel();
 
-            Loaded += MainWindow_Loaded; 
 
             Logger.MessageReceived += Logger_MessageReceived;
         }
 
         #region 초기화 관련
-        
+
         private async void PlcStart(int PortID)
         {
             await App.PlcServer.StartAsync(PortID);
-        }
-        
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            // 컨트롤 Loaded 완료 이후 실행
-            Dispatcher.BeginInvoke(
-                () =>
-                {
-                    _layoutManager.Initialize();
-                },
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-        }
-
-        private void LayoutManager_LoadComplete()
-        {
-            Loc01.Connect(Loc02);
-            Loc02.Connect(Loc03);
-            Loc03.Connect(Loc04);
-            Loc04.Connect(Loc05);
-            Loc05.Connect(Loc06);
-            Loc06.Connect(Loc07);
-            Loc07.Connect(Loc08);
-            Loc08.Connect(Loc09);
-            Loc09.Connect(Loc10);
-            Loc10.Connect(Loc11);
-            Loc11.Connect(Loc12);
-            Loc12.Connect(Loc01);
-
-            Port01.Connect(Loc01);
-            Loc01.Connect(Port01);
-
-            Port02.Connect(Loc07);
-            Loc07.Connect(Port02);
-
-            SetPlcAddress();
-
-            _simulation = new(App.CarrierManager, App.Nodes);
-            RefreshEquipmentTree();
-
-            // Node / 프로젝트 로딩 완료
-            App.PlcBindingManager.Register(CommStatus);
-            App.PlcBindingManager.Register(Port01);
-            App.PlcBindingManager.RebuildCache();
-            // 그 다음 MC Server 시작
-            PlcStart(5000);
-
-            Logger.Info("Layout Load Complete");
-
-
-
-            Carrier01.SetPosition(Port01);
-            _simulation.SetDestination(App.CarrierManager.Get("C01"), Loc06);
 
         }
 
@@ -156,6 +106,24 @@ namespace MaterialControlSimulator
                 Name = "Carrier ID",
                 Value = node.Carrier?.Id ?? "None"
             });
+        }
+
+        public void InitializeSimulation()
+        {
+            // Node 등록
+            // PLC Binding 등록
+            // Carrier 초기화
+            // Simulation 시작 등
+
+            _simulation = new(App.CarrierManager, App.Nodes);
+            RefreshEquipmentTree();
+
+            App.PlcBindingManager.Register(CommStatus);
+            App.PlcBindingManager.RebuildCache();
+
+            // 그 다음 MC Server 시작
+            PlcStart(5000);
+
         }
 
         #region 메뉴 이벤트
@@ -333,42 +301,6 @@ namespace MaterialControlSimulator
         } 
         #endregion
 
-
-        private void SetPlcAddress()
-        {
-            Port01.PlcBindings.Add(new PlcBinding
-            {
-                PropertyName = "CarrierID",
-                Address = "W100",
-                DataType = PlcDataType.String,
-                WordCount = 16
-            });
-
-            Port01.PlcBindings.Add(new PlcBinding
-            {
-                PropertyName = "IsExist",
-                Address = "B100",
-                DataType = PlcDataType.Bool
-            });
-
-            Port01.PlcBindings.Add(new PlcBinding
-            {
-                PropertyName = "PortStatus",
-                Address = "W200",
-                DataType = PlcDataType.UInt16
-            });
-
-
-            Port01.PlcBindings.Add(new PlcBinding
-            {
-                PropertyName = "PortStatus",
-                Address = "W200",
-                DataType = PlcDataType.UInt16
-            });
-
-
-            Debug.WriteLine(App.PlcBindingManager.GetValue("B100"));
-        }
 
     }
 }
