@@ -1,5 +1,6 @@
 ﻿using MaterialControlSimulator.Controls;
 using MaterialControlSimulator.Plc;
+using MaterialControlSimulator.SimulationType;
 using System;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -26,31 +27,54 @@ namespace MaterialControlSimulator
     /// </summary>
     public partial class MainWindow : Window
     {
-        public SimulationManager _simulation; 
+        public SimulationManager _simulation;
+        private SimulatorConfig _config;
 
         public ObservableCollection<PropertyItem> Properties { get; } = new();
 
-        private readonly SimulationType.SampleType sample = new SimulationType.SampleType();
 
         public MainWindow()
         {
             InitializeComponent();
 
-            SimulationHost.Content = sample;
-
-            PropertyGrid.ItemsSource = Properties;
-
-            DataContext = new MainViewModel();
-
-
+            Loaded += MainWindow_Loaded;
             Logger.MessageReceived += Logger_MessageReceived;
         }
 
         #region 초기화 관련
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            _config = SimulatorConfigLoader.Load();
+
+            LoadSimulation();
+        }
+
+        private void LoadSimulation()
+        {
+            UserControl simulation =
+                _config.SimulationType switch
+                {
+                    "Sample" =>
+                        new SampleType(),
+
+                    //"TYPE_B" =>
+                    //    new SimulationTypeBControl(),
+
+                    _ =>
+                        throw new Exception(
+                            $"Unknown SimulationType: {_config.SimulationType}")
+                };
+
+            SimulationHost.Content =
+                simulation;
+        }
 
         private async void PlcStart(int PortID)
         {
-            await App.PlcServer.StartAsync(PortID);
+            if (_config.McPort > 0)
+                await App.PlcServer.StartAsync(_config.McPort);
+            else
+                await App.PlcServer.StartAsync(PortID);
 
         }
 
