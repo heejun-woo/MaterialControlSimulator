@@ -72,11 +72,7 @@ namespace MaterialControlSimulator
 
         private async void PlcStart(int PortID)
         {
-            if (_config.McPort > 0)
-                await App.PlcServer.StartAsync(_config.McPort);
-            else
-                await App.PlcServer.StartAsync(PortID);
-
+            await App.PlcServer.StartAsync(PortID);
         }
 
         private void Logger_MessageReceived(string message)
@@ -149,7 +145,7 @@ namespace MaterialControlSimulator
             App.PlcBindingManager.RebuildCache();
 
             // 그 다음 MC Server 시작
-            PlcStart(5000);
+            PlcStart(_config.McPort);
 
         }
 
