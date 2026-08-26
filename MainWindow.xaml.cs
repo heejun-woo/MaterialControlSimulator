@@ -131,6 +131,8 @@ namespace MaterialControlSimulator
                 Name = "Carrier ID",
                 Value = node.Carrier?.Id ?? "None"
             });
+
+            PropertyGrid.ItemsSource = Properties;
         }
 
         public void InitializeSimulation()
