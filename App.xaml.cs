@@ -27,7 +27,9 @@ namespace MaterialControlSimulator
         public static CarrierHistoryManager CarrierHistory { get; } = new CarrierHistoryManager();
         public static CarrierRouteManager _routeManager { get; } = new(CarrierManager, Nodes);
 
-       public App()
+        public static CarrierStateManager CarrierStateManager { get; } = new();
+
+        public App()
         {
             InitializeComponent();
 

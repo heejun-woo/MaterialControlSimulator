@@ -1,7 +1,9 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 namespace MaterialControlSimulator
 {
@@ -12,16 +14,29 @@ namespace MaterialControlSimulator
         private readonly List<CarrierHistory>
             _histories = new();
 
+        private readonly string _folder =
+            Path.Combine(
+                AppContext.BaseDirectory,
+                "Data",
+                "CarrierHistory");
+
         public int MaxCount { get; set; } = 10000;
 
         public event Action? HistoryChanged;
 
+        public CarrierHistoryManager()
+        {
+            Directory.CreateDirectory(_folder);
+
+            LoadToday();
+        }
+
         public void Add(
-            string carrierId,
-            string fromNode,
-            string toNode,
-            string eventName,
-            string message = "")
+    string carrierId,
+    string fromNode,
+    string toNode,
+    string eventName,
+    string message = "")
         {
             var history =
                 new CarrierHistory
@@ -38,6 +53,8 @@ namespace MaterialControlSimulator
             {
                 _histories.Add(history);
 
+                Save(history);
+
                 if (_histories.Count > MaxCount)
                 {
                     int removeCount =
@@ -50,6 +67,16 @@ namespace MaterialControlSimulator
             }
 
             HistoryChanged?.Invoke();
+        }
+
+        public void Add(CarrierHistory history)
+        {
+            lock (_lock)
+            {
+                _histories.Add(history);
+
+                Save(history);
+            }
         }
 
         public List<CarrierHistory> GetAll()
@@ -75,6 +102,70 @@ namespace MaterialControlSimulator
                     .OrderByDescending(x => x.Time)
                     .ToList();
             }
+        }
+
+        private void Save(CarrierHistory history)
+        {
+            string path =
+                GetFilePath(history.Time.Date);
+
+            string json =
+                JsonSerializer.Serialize(history);
+
+            File.AppendAllText(
+                path,
+                json + Environment.NewLine);
+        }
+
+        private string GetFilePath(DateTime date)
+        {
+            return Path.Combine(
+                _folder,
+                $"{date:yyyy-MM-dd}.jsonl");
+        }
+
+        private void LoadToday()
+        {
+            _histories.Clear();
+
+            string path =
+                GetFilePath(DateTime.Today);
+
+            if (!File.Exists(path))
+                return;
+
+            foreach (string line in File.ReadLines(path))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                var history =
+                    JsonSerializer.Deserialize
+                        <CarrierHistory>(line);
+
+                if (history != null)
+                    _histories.Add(history);
+            }
+
+
+        }
+        public List<CarrierHistory> Load(DateTime date)
+        {
+            string path =
+                GetFilePath(date);
+
+            if (!File.Exists(path))
+                return new List<CarrierHistory>();
+
+            return File.ReadLines(path)
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x))
+                .Select(x =>
+                    JsonSerializer.Deserialize
+                        <CarrierHistory>(x))
+                .Where(x => x != null)
+                .Select(x => x!)
+                .ToList();
         }
 
         public void Clear()

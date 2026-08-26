@@ -53,7 +53,7 @@ namespace MaterialControlSimulator
 
             CreatedCarrier = new CarrierControl
             {
-                Id = id
+                Id = id, CurrentNode = InitNode
             };
 
             InitNode?.TryEnter(CreatedCarrier);

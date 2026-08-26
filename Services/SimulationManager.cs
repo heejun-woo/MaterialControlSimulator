@@ -124,6 +124,7 @@ namespace MaterialControlSimulator
                 //목적지 도착
                 if(session.Destination == nextNode)
                 {
+                    session.Destination = null;
                     session.Route = null;
                 }
             }

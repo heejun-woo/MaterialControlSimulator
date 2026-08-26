@@ -13,11 +13,11 @@ namespace MaterialControlSimulator
 
         public void Initialize()
         {
-            if (App.Nodes.Count == 0)
-                return;
+            //if (App.Nodes.Count == 0)
+            //    return;
 
-            if (App.Carriers.Count == 0)
-                return;
+            //if (App.Carriers.Count == 0)
+            //    return;
 
 
             LoadComplete?.Invoke();

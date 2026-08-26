@@ -76,16 +76,13 @@ namespace MaterialControlSimulator.SimulationType
             Logger.Info("Layout Load Complete");
 
 
-
-            Carrier01.SetPosition(Port01);
-
-
             var main = Window.GetWindow(this) as MainWindow;
             if (main != null)
             {
                 main.InitializeSimulation();
 
-                main._simulation.SetDestination(App.CarrierManager.Get("C01"), Loc06);
+                App.CarrierStateManager.RestoreCarriers(main._simulation, SimulationCanvas);
+
             }
 
         }

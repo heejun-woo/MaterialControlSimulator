@@ -3,6 +3,7 @@ using MaterialControlSimulator.Plc;
 using MaterialControlSimulator.SimulationType;
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Net.Mime;
@@ -322,9 +323,14 @@ namespace MaterialControlSimulator
                 y = 0;
 
             node.BringIntoView();
-        } 
+        }
         #endregion
 
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            App.CarrierStateManager.Save();
 
+            base.OnClosing(e);
+        }
     }
 }
