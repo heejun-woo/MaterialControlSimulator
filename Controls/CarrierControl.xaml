@@ -6,146 +6,91 @@
              xmlns:local="clr-namespace:MaterialControlSimulator.Controls"
              mc:Ignorable="d" 
              Width="60" Height="60" IsHitTestVisible="False">
-    <Grid>
+    <Border
+        CornerRadius="6"
+        Background="#202830"
+        BorderBrush="#00B8D4"
+        BorderThickness="2">
 
-        <!-- Carrier 본체 -->
-        <Border
-            Margin="3"
-            Background="#252A30"
-            BorderBrush="#66727D"
-            BorderThickness="2"
-            CornerRadius="6">
+        <Grid>
 
-            <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="24"/>
+                <RowDefinition Height="1"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                <!-- 바닥 트레이 -->
-                <Border
-                    Margin="9,12,9,15"
-                    Background="#161A1E"
-                    BorderBrush="#8A959F"
-                    BorderThickness="2"
-                    CornerRadius="3">
-
-                    <Grid>
-
-                        <!-- 빈 캐리어 표시 -->
-                        <Grid>
-
-                            <Grid.Style>
-                                <Style TargetType="Grid">
-                                    <Setter Property="Visibility"
-                                            Value="Visible"/>
-
-                                    <Style.Triggers>
-                                        <DataTrigger
-                                            Binding="{Binding IsNotEmpty,
-                                                RelativeSource={
-                                                    RelativeSource AncestorType=UserControl}}"
-                                            Value="True">
-
-                                            <Setter Property="Visibility"
-                                                    Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Grid.Style>
-
-                            <!-- 빈 트레이 내부 -->
-                            <Rectangle
-                                Margin="5"
-                                Stroke="#59646E"
-                                StrokeThickness="1"
-                                StrokeDashArray="3 2"/>
+            <!-- Carrier ID -->
+            <Viewbox
+                Grid.Row="0"
+                Stretch="Uniform"
+                StretchDirection="DownOnly"
+                Margin="3,4">
 
                             <TextBlock
-                                Text="EMPTY"
-                                Foreground="#7F8A94"
-                                FontSize="7"
-                                FontWeight="SemiBold"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
+                    Text="{Binding Id,
+                        RelativeSource={RelativeSource AncestorType=local:CarrierControl}}"
+                    Foreground="White"
+                    FontSize="11"
+                    FontWeight="Bold"
+                    FontFamily="Consolas"
+                    TextAlignment="Center"/>
 
-                        </Grid>
+            </Viewbox>
 
+            <!-- 구분선 -->
+            <Border
+                Grid.Row="1"
+                Background="#53606C"
+                Margin="4,0"/>
 
-                        <!-- 제품 적재 표시 -->
-                        <Grid>
+            <!-- Cell 수량 -->
+            <TextBlock
+                Grid.Row="2"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="15"
+                FontWeight="Bold">
 
-                            <Grid.Style>
-                                <Style TargetType="Grid">
-                                    <Setter Property="Visibility"
-                                            Value="Collapsed"/>
+                <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0}/{1}">
+                        <Binding
+                            Path="CurrentCellCount"
+                            RelativeSource="{RelativeSource AncestorType=local:CarrierControl}"/>
 
-                                    <Style.Triggers>
-                                        <DataTrigger
-                                            Binding="{Binding IsNotEmpty,
-                                                RelativeSource={
-                                                    RelativeSource AncestorType=UserControl}}"
-                                            Value="false">
+                        <Binding
+                            Path="MaxCellCount"
+                            RelativeSource="{RelativeSource AncestorType=local:CarrierControl}"/>
+                    </MultiBinding>
+                </TextBlock.Text>
 
-                                            <Setter Property="Visibility"
-                                                    Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Grid.Style>
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
 
-                            <!-- 제품 -->
-                            <Border
-                                Margin="5"
-                                Background="#C78332"
-                                BorderBrush="#F1B45C"
-                                BorderThickness="1"
-                                CornerRadius="2">
+                        <Setter
+                            Property="Foreground"
+                            Value="#FFD15C"/>
 
-                                <Grid>
+                        <!-- Empty -->
+                        <Style.Triggers>
+                            <DataTrigger
+                                Binding="{Binding CurrentCellCount,
+                                    RelativeSource={RelativeSource AncestorType=local:CarrierControl}}"
+                                Value="0">
 
-                                    <!-- 제품 윗면 -->
-                                    <Polygon
-                                        Points="8,3 27,3 32,7 13,7"
-                                        Fill="#E2A14B"/>
+                                <Setter
+                                    Property="Foreground"
+                                    Value="#5DE7F5"/>
 
-                                    <!-- 제품 -->
-                                    <TextBlock
-                                        Text="P"
-                                        Foreground="#FFF1D0"
-                                        FontSize="12"
-                                        FontWeight="Bold"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"/>
+                            </DataTrigger>
+                        </Style.Triggers>
 
-                                </Grid>
+                    </Style>
+                </TextBlock.Style>
 
-                            </Border>
+            </TextBlock>
 
-                        </Grid>
+        </Grid>
 
-                    </Grid>
-
-                </Border>
-
-
-                <!-- Carrier ID -->
-                <Border
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Bottom"
-                    Background="#303840"
-                    Padding="4,1"
-                    CornerRadius="3">
-
-                    <TextBlock
-                        Text="{Binding Id,
-                            RelativeSource={
-                                RelativeSource AncestorType=UserControl}}"
-                        Foreground="White"
-                        FontSize="8"
-                        FontWeight="Bold"/>
-
-                </Border>
-
-            </Grid>
-
-        </Border>
-
-    </Grid>
+    </Border>
 </UserControl>

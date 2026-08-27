@@ -37,19 +37,56 @@ namespace MaterialControlSimulator.Controls
             set => SetValue(IdProperty, value);
         }
 
-        public static readonly DependencyProperty EmptyProperty =
-            DependencyProperty.Register(
-        nameof(IsNotEmpty),
-        typeof(bool),
-        typeof(CarrierControl),
-        new PropertyMetadata(false));
+        //public static readonly DependencyProperty EmptyProperty =
+        //    DependencyProperty.Register(
+        //        nameof(IsNotEmpty),
+        //        typeof(bool),
+        //        typeof(CarrierControl),
+        //        new PropertyMetadata(false));
 
-        public bool IsNotEmpty
+        //public bool IsNotEmpty
+        //{
+        //    get => (bool)GetValue(EmptyProperty);
+        //    set => SetValue(EmptyProperty, value);
+        //}
+
+        public int MaxCellCount
         {
-            get => (bool)GetValue(EmptyProperty);
-            set => SetValue(EmptyProperty, value);
+            get => (int)GetValue(MaxCellCountProperty);
+            set => SetValue(MaxCellCountProperty, value);
         }
 
+        public static readonly DependencyProperty MaxCellCountProperty =
+                DependencyProperty.Register(
+                    nameof(MaxCellCount),
+                    typeof(int),
+                    typeof(CarrierControl),
+                    new PropertyMetadata(0));
+
+        public int CurrentCellCount
+        {
+            get => (int)GetValue(CurrentCellCountProperty);
+            set => SetValue(CurrentCellCountProperty, value);
+        }
+
+        public static readonly DependencyProperty CurrentCellCountProperty =
+            DependencyProperty.Register(
+                nameof(CurrentCellCount),
+                typeof(int),
+                typeof(CarrierControl),
+                new PropertyMetadata(
+                    0,
+                    OnCurrentCellCountChanged));
+        public bool Empty;
+
+        private static void OnCurrentCellCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var carrier =
+                (CarrierControl)d;
+
+            carrier.Empty =
+                carrier.CurrentCellCount == 0;
+        }
         public NodeControl? CurrentNode { get; set; }
 
         public CarrierControl()

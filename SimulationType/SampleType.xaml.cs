@@ -1,4 +1,5 @@
 ﻿using MaterialControlSimulator.Plc;
+using MaterialControlSimulator.Plc.Logic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,6 +48,9 @@ namespace MaterialControlSimulator.SimulationType
 
         private void LayoutManager_LoadComplete()
         {
+
+
+            #region Loader 노드연결
             Loc01.Connect(Loc02);
             Loc02.Connect(Loc03);
             Loc03.Connect(Loc04);
@@ -65,6 +69,22 @@ namespace MaterialControlSimulator.SimulationType
 
             Port02.Connect(Loc07);
             Loc07.Connect(Port02);
+            #endregion
+
+            PkgLoc01.Connect(PkgLoc02);
+            PkgLoc02.Connect(PkgLoc03);
+            PkgLoc03.Connect(PkgLoc04);
+            PkgLoc04.Connect(PkgLoc05);
+            PkgLoc05.Connect(PkgLoc06);
+            PkgLoc06.Connect(PkgLoc07);
+            PkgLoc07.Connect(PkgLoc08);
+            PkgLoc08.Connect(PkgLoc01);
+
+            Loc05.NextNodeId = "Loc06";
+            Loc05.PairNodeId = "PkgLoc01";
+
+            PkgLoc01.NextNodeId = "PkgLoc02";
+            PkgLoc01.PairNodeId = "Loc06";
 
             SetPlcAddress();
 
@@ -75,7 +95,6 @@ namespace MaterialControlSimulator.SimulationType
 
             Logger.Info("Layout Load Complete");
 
-
             var main = Window.GetWindow(this) as MainWindow;
             if (main != null)
             {
@@ -84,6 +103,11 @@ namespace MaterialControlSimulator.SimulationType
                 App.CarrierStateManager.RestoreCarriers(main._simulation, SimulationCanvas);
 
             }
+
+
+            App.scanEngine.AddLogic(new CommunicationCheckLogic());
+            App.scanEngine.AddLogic(new CellTransferLogic(Loc05, Loc05.Id, PkgLoc01.Id, Loc05.NextNodeId, PkgLoc01.NextNodeId, 10, 10));
+            App.scanEngine.Start();
 
         }
 

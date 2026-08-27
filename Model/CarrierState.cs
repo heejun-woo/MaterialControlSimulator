@@ -16,6 +16,8 @@ namespace MaterialControlSimulator
         // 현재 목적지
         public string DestinationNodeId { get; set; } = "";
 
-        public bool Empty { get; set; }
+        public int MaxCellCount { get; set; }
+
+        public int CurrentCellCount { get; set; }
     }
 }

@@ -119,7 +119,10 @@ namespace MaterialControlSimulator.Controls
             // -----------------------------------------
             // Carrier Empty 상태 변경
             // -----------------------------------------
-            carrier.IsNotEmpty = SetEmpty;
+
+            if (!SetEmpty)
+                carrier.CurrentCellCount = carrier.MaxCellCount;
+            else carrier.CurrentCellCount = 0;
 
             // 상태 변경도 눈에 보이도록 잠시 대기
             await Task.Delay(300);

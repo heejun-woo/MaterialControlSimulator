@@ -34,8 +34,11 @@ namespace MaterialControlSimulator
                             DestinationNodeId =
                                 session.Destination?.Id ?? "",
 
-                            Empty =
-                                session.Carrier.IsNotEmpty
+                            MaxCellCount =
+                                session.Carrier.MaxCellCount,
+
+                            CurrentCellCount =
+                                session.Carrier.CurrentCellCount,
                         })
                     .ToList();
 
@@ -96,14 +99,18 @@ namespace MaterialControlSimulator
 
                 App.CarrierManager.Register(carrier);
 
+                currentNode.TryEnter(carrier);
+
                 if (carrier.CurrentNode is CarrierProcessControl)
                 {
                    await (carrier.CurrentNode as CarrierProcessControl).ProcessAsync(carrier);
                 }
 
+                carrier.MaxCellCount =
+                    state.MaxCellCount;
 
-                carrier.IsNotEmpty =
-                    state.Empty;
+                carrier.CurrentCellCount =
+                    state.CurrentCellCount;
 
                 // 애니메이션 없이 바로 현재 위치에 배치
                 carrier.SetPosition(
@@ -117,12 +124,9 @@ namespace MaterialControlSimulator
                 if (session == null)
                     continue;
 
-                session.Carrier.CurrentNode =
-                    currentNode;
-
+      
                 // 목적지 복원
-                if (!string.IsNullOrWhiteSpace(
-                        state.DestinationNodeId))
+                if (!string.IsNullOrWhiteSpace(state.DestinationNodeId) && state.CurrentNodeId != state.DestinationNodeId)
                 {
                     var destination =
                         App.Nodes.Get(

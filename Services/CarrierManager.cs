@@ -188,5 +188,29 @@ namespace MaterialControlSimulator
             }
         }
 
+        public CarrierSession? FindSessionAtNode(string nodeId)
+        {
+            foreach (var session in Sessions)
+            {
+                var carrier = session.Carrier;
+
+                CarrierSession? result = carrier.Dispatcher.Invoke(() =>
+                {
+                    if (carrier.CurrentNode == null)
+                        return null;
+
+                    if (carrier.CurrentNode.Id == nodeId)
+                        return session;
+
+                    return null;
+                });
+
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
+
     }
 }

@@ -49,11 +49,25 @@ namespace MaterialControlSimulator
                 MessageBox.Show("초기 위치 선택하세요.");
                 return;
             }
+
+            if (!int.TryParse(
+                MaxCellCountTextBox.Text,
+                out int maxCellCount))
+                return;
+
+            if (maxCellCount <= 0)
+            {
+                MessageBox.Show("최대 갯수 설정 오류");
+                return;
+            }
+
             NodeControl InitNode = InitialNodeComboBox.SelectedItem as NodeControl;
 
             CreatedCarrier = new CarrierControl
             {
-                Id = id, CurrentNode = InitNode
+                Id = id,
+                CurrentNode = InitNode,
+                MaxCellCount = maxCellCount
             };
 
             InitNode?.TryEnter(CreatedCarrier);

@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:MaterialControlSimulator.Controls" 
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="850" d:DesignWidth="1600">
     <Grid>
         <Canvas x:Name="SimulationCanvas">
             <local:PortControl           
@@ -44,11 +44,9 @@
                       Canvas.Left="460"               
                       Canvas.Top="200"/>
 
-            <local:CarrierProcessControl          
+            <local:CellUnloadControl          
                       x:Name="Loc05"                  
                       Id="Loc05"
-                      SetEmpty="True"
-                      NextNodeId="Loc06"
                       Canvas.Left="580"               
                       Canvas.Top="200"/>
 
@@ -95,6 +93,56 @@
                       NextNodeId="Loc01"
                       Canvas.Left="100"               
                       Canvas.Top="300"/>
+
+            <local:CellLoadControl          
+                  x:Name="PkgLoc01"                  
+                  Id="PkgLoc01"                 
+                  Canvas.Left="670"               
+                  Canvas.Top="200"/>
+            
+            <local:LocationControl          
+                  x:Name="PkgLoc02"                  
+                  Id="PkgLoc02"                 
+                  Canvas.Left="760"               
+                  Canvas.Top="200"/>
+            
+            <local:LocationControl          
+                 x:Name="PkgLoc03"                  
+                 Id="PkgLoc03"                 
+                 Canvas.Left="850"               
+                 Canvas.Top="200"/>
+
+            <local:LocationControl          
+                 x:Name="PkgLoc04"                  
+                 Id="PkgLoc04"                 
+                 Canvas.Left="850"               
+                 Canvas.Top="290"/>
+
+            <local:LocationControl          
+                 x:Name="PkgLoc05"                  
+                 Id="PkgLoc05"                 
+                 Canvas.Left="850"               
+                 Canvas.Top="380"/>
+
+            <local:CarrierProcessControl          
+                 x:Name="PkgLoc06"                  
+                 Id="PkgLoc06"  
+                 SetEmpty="True"
+                 NextNodeId="PkgLoc07"               
+                 Canvas.Left="760"               
+                 Canvas.Top="380"/>
+
+            <local:LocationControl          
+                  x:Name="PkgLoc07"                  
+                  Id="PkgLoc07"                 
+                  Canvas.Left="760"               
+                  Canvas.Top="290"/>
+            
+            <local:LocationControl          
+                  x:Name="PkgLoc08"                  
+                  Id="PkgLoc08"                 
+                  Canvas.Left="670"               
+                  Canvas.Top="290"/>
 
         </Canvas>
     </Grid>

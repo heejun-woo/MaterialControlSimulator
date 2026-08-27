@@ -15,6 +15,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -51,9 +52,23 @@
             IsEditable="True"
             IsReadOnly="True">
         </ComboBox>
-        
+
+        <TextBlock           
+            Grid.Row="2"
+            Grid.Column="0"
+            Text="최대 갯수"
+            Margin="0,0,0,4"/>
+
+        <TextBox 
+            Grid.Row="2"
+            Grid.Column="1"
+            x:Name="MaxCellCountTextBox"
+            Text="40"
+            Height="28"
+            Margin="0,0,0,12"/>
+
         <StackPanel
-            Grid.Row="3"
+            Grid.Row="4"
             Grid.ColumnSpan="2"
             Orientation="Horizontal"
             HorizontalAlignment="Right">

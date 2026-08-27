@@ -33,8 +33,6 @@ namespace MaterialControlSimulator
         {
             InitializeComponent();
 
-            scanEngine.AddLogic(new CommunicationCheckLogic());
-            scanEngine.Start();
         }
     }
 
