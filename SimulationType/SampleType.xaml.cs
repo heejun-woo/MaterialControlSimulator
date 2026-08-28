@@ -1,4 +1,5 @@
-﻿using MaterialControlSimulator.Plc;
+﻿using MaterialControlSimulator.Controls;
+using MaterialControlSimulator.Plc;
 using MaterialControlSimulator.Plc.Logic;
 using System;
 using System.Collections.Generic;
@@ -51,34 +52,36 @@ namespace MaterialControlSimulator.SimulationType
 
 
             #region Loader 노드연결
-            Loc01.Connect(Loc02);
-            Loc02.Connect(Loc03);
-            Loc03.Connect(Loc04);
-            Loc04.Connect(Loc05);
-            Loc05.Connect(Loc06);
-            Loc06.Connect(Loc07);
-            Loc07.Connect(Loc08);
-            Loc08.Connect(Loc09);
-            Loc09.Connect(Loc10);
-            Loc10.Connect(Loc11);
-            Loc11.Connect(Loc12);
-            Loc12.Connect(Loc01);
 
-            Port01.Connect(Loc01);
-            Loc01.Connect(Port01);
+            ConnectNodes(Loc01, Loc02);
+            ConnectNodes(Loc02, Loc03);
+            ConnectNodes(Loc03, Loc04);
+            ConnectNodes(Loc04, Loc05);
+            ConnectNodes(Loc05, Loc06);
+            ConnectNodes(Loc06, Loc07);
+            ConnectNodes(Loc07, Loc08);
+            ConnectNodes(Loc08, Loc09);
+            ConnectNodes(Loc09, Loc10);
+            ConnectNodes(Loc10, Loc11);
+            ConnectNodes(Loc11, Loc12);
+            ConnectNodes(Loc12, Loc01);
+            
+            ConnectNodes(Port01, Loc01);
+            ConnectNodes(Loc01, Port01);
+            ConnectNodes(Port02, Loc07);
+            ConnectNodes(Loc07, Port02);
 
-            Port02.Connect(Loc07);
-            Loc07.Connect(Port02);
             #endregion
 
-            PkgLoc01.Connect(PkgLoc02);
-            PkgLoc02.Connect(PkgLoc03);
-            PkgLoc03.Connect(PkgLoc04);
-            PkgLoc04.Connect(PkgLoc05);
-            PkgLoc05.Connect(PkgLoc06);
-            PkgLoc06.Connect(PkgLoc07);
-            PkgLoc07.Connect(PkgLoc08);
-            PkgLoc08.Connect(PkgLoc01);
+
+            ConnectNodes(PkgLoc01, PkgLoc02);
+            ConnectNodes(PkgLoc02, PkgLoc03);
+            ConnectNodes(PkgLoc03, PkgLoc04);
+            ConnectNodes(PkgLoc04, PkgLoc05);
+            ConnectNodes(PkgLoc05, PkgLoc06);
+            ConnectNodes(PkgLoc06, PkgLoc07);
+            ConnectNodes(PkgLoc07, PkgLoc08);
+            ConnectNodes(PkgLoc08, PkgLoc01);
 
             Loc05.NextNodeId = "Loc06";
             Loc05.PairNodeId = "PkgLoc01";
@@ -145,6 +148,55 @@ namespace MaterialControlSimulator.SimulationType
 
 
             Debug.WriteLine(App.PlcBindingManager.GetValue("B100"));
+        }
+
+
+        private void ConnectNodes(NodeControl source, NodeControl target)
+        {
+            source.Connect(target);
+            var line = CreateConnectionLine(source, target);
+            SimulationCanvas.Children.Add(line);
+            Panel.SetZIndex(line, 0);
+        }
+        private Line CreateConnectionLine(NodeControl source, NodeControl target)
+        {
+            var start = GetNodeCenter(source);
+            var end = GetNodeCenter(target);
+
+            var line = new Line
+            {
+                X1 = start.X,
+                Y1 = start.Y,
+
+                X2 = end.X,
+                Y2 = end.Y,
+
+                Stroke = source.BorderBrush,
+                StrokeThickness = 3,
+
+                IsHitTestVisible = false
+            };
+
+            return line;
+        }
+
+        private Point GetNodeCenter(FrameworkElement control)
+        {
+            double left =
+                Canvas.GetLeft(control);
+
+            double top =
+                Canvas.GetTop(control);
+
+            if (double.IsNaN(left))
+                left = 0;
+
+            if (double.IsNaN(top))
+                top = 0;
+
+            return new Point(
+                left + control.ActualWidth / 2,
+                top + control.ActualHeight / 2);
         }
     }
 }

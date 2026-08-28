@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace MaterialControlSimulator.Controls
 {
@@ -32,6 +33,19 @@ namespace MaterialControlSimulator.Controls
         public List<NodeControl> ConnectedNodes { get; } = new();
         public List<NodeControl> ReverseConnectedNodes { get; } = new();
 
+
+        public static readonly DependencyProperty BorderBrushProperty =
+    DependencyProperty.Register(
+        nameof(BorderBrush),
+        typeof(Brush),
+        typeof(NodeControl),
+        new PropertyMetadata(Brushes.Gray));
+
+        public Brush BorderBrush
+        {
+            get => (Brush)GetValue(BorderBrushProperty);
+            set => SetValue(BorderBrushProperty, value);
+        }
 
         public NodeControl()
         {

@@ -11,7 +11,10 @@
         <Border
             CornerRadius="8"
             Background="#24232E"
-            BorderBrush="#7667D8"
+            BorderBrush="{Binding BorderBrush,
+                RelativeSource={RelativeSource
+                Mode=FindAncestor,
+                AncestorType={x:Type local:NodeControl}}}"
             BorderThickness="2">
 
             <Border.Style>
@@ -34,8 +37,11 @@
                 <!-- 내부 위치 영역 -->
                 <Border x:Name="NodeBorder"
                     Margin="12"
-                    Background="#171820"
-                    BorderBrush="#7667D8"
+                    Background="#171820"            
+                    BorderBrush="{Binding BorderBrush,
+                        RelativeSource={RelativeSource
+                        Mode=FindAncestor,
+                        AncestorType={x:Type local:NodeControl}}}"
                     BorderThickness="1"
                     CornerRadius="4">
 
@@ -44,7 +50,10 @@
                         <!-- 위치 영역 표시 -->
                         <Rectangle
                             Margin="5"
-                            Stroke="#7667D8"
+                            Stroke="{Binding BorderBrush,
+                                RelativeSource={RelativeSource
+                                Mode=FindAncestor,
+                                AncestorType={x:Type local:NodeControl}}}"
                             StrokeThickness="1"
                             StrokeDashArray="3 2"/>
 
@@ -52,7 +61,10 @@
                         <Ellipse
                             Width="8"
                             Height="8"
-                            Fill="#A69AFF"
+                            Fill="{Binding BorderBrush,
+                                RelativeSource={RelativeSource
+                                Mode=FindAncestor,
+                                AncestorType={x:Type local:NodeControl}}}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"/>
 
