@@ -11,10 +11,7 @@
         <Border
             CornerRadius="8"
             Background="#24232E"
-            BorderBrush="{Binding BorderBrush,
-                RelativeSource={RelativeSource
-                Mode=FindAncestor,
-                AncestorType={x:Type local:NodeControl}}}"
+            BorderBrush="DarkSlateGray"
             BorderThickness="2">
 
             <Border.Style>
