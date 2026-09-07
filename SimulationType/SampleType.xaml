@@ -48,7 +48,7 @@
                       Canvas.Left="220"   
                       Canvas.Top="200"/>
 
-            <local:LocationControl                
+            <local:HostRequestControl                
                       x:Name="Loc03"                 
                       Id="Loc03"  
                       BorderBrush="#7667D8"     
@@ -118,6 +118,13 @@
                       SetEmpty="False"
                       NextNodeId="Loc01"
                       Canvas.Left="100"               
+                      Canvas.Top="300"/>
+
+            <local:LocationControl          
+                      x:Name="Loc13"                  
+                      Id="Loc13" 
+                      BorderBrush="#7667D8"                
+                      Canvas.Left="340"               
                       Canvas.Top="300"/>
 
             <local:CellLoadControl          

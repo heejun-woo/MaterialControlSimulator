@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using WpfApp;
 
 namespace MaterialControlSimulator
 {
@@ -31,13 +33,9 @@ namespace MaterialControlSimulator
             LoadToday();
         }
 
-        public void Add(
-    string carrierId,
-    string fromNode,
-    string toNode,
-    string eventName,
-    string message = "")
+        public void Add(string carrierId, string fromNode, string toNode, string eventName, string message = "")
         {
+            Logger.Info($"[{carrierId}] : {message}");
             var history =
                 new CarrierHistory
                 {

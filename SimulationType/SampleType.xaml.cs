@@ -65,7 +65,10 @@ namespace MaterialControlSimulator.SimulationType
             ConnectNodes(Loc10, Loc11);
             ConnectNodes(Loc11, Loc12);
             ConnectNodes(Loc12, Loc01);
-            
+
+            ConnectNodes(Loc03, Loc13);
+            ConnectNodes(Loc13, Loc09);
+
             ConnectNodes(Port01, Loc01);
             ConnectNodes(Loc01, Port01);
             ConnectNodes(Port02, Loc07);
@@ -110,8 +113,9 @@ namespace MaterialControlSimulator.SimulationType
 
             App.scanEngine.AddLogic(new CommunicationCheckLogic());
             App.scanEngine.AddLogic(new CellTransferLogic(Loc05, Loc05.Id, PkgLoc01.Id, Loc05.NextNodeId, PkgLoc01.NextNodeId, 10, 10));
-            App.scanEngine.Start();
+            App.scanEngine.AddLogic(new HostRequestLogic(Loc03.Id, 0x3A49, 0x3149, 0x3419, Loc04.Id, Loc09.Id, string.Empty, 30));
 
+            App.scanEngine.Start();
         }
 
         private void SetPlcAddress()

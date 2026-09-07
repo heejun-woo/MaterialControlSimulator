@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WpfApp;
 
 namespace MaterialControlSimulator.Plc.Logic
 {
@@ -140,6 +141,13 @@ namespace MaterialControlSimulator.Plc.Logic
 
                     if (source.CurrentCellCount == 0)
                     {
+                        App.CarrierHistory.Add(
+                            sourceSession.Carrier.Id,
+                            string.Empty,
+                            string.Empty,
+                            CarrierHistoryType.CellTransfer.ToString(),
+                            $"CellTransfer : Empty");
+
                         App._routeManager.SetDestination(
                             sourceSession.Carrier,
                             _unloadNextNodeId);
@@ -152,6 +160,13 @@ namespace MaterialControlSimulator.Plc.Logic
                     if (target.CurrentCellCount >=
                         target.MaxCellCount)
                     {
+                        App.CarrierHistory.Add(
+                            sourceSession.Carrier.Id,
+                            string.Empty,
+                            string.Empty,
+                            CarrierHistoryType.CellTransfer.ToString(),
+                            $"CellTransfer : {target.CurrentCellCount}");
+
                         App._routeManager.SetDestination(
                             targetSession.Carrier,
                             _loadNextNodeId);

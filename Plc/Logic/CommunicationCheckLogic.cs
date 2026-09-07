@@ -49,12 +49,14 @@ namespace MaterialControlSimulator.Plc.Logic
                 _lastRequestTime = DateTime.Now;
                 _lastRequest = request;
             }
-
-            // Timeout
-            if ((DateTime.Now - _lastRequestTime).TotalSeconds > 30)
+            else
             {
-                manager.WriteBit(0x3808, false);
-                manager.WriteBit(0x3809, true);
+                // Timeout
+                if ((DateTime.Now - _lastRequestTime).TotalSeconds > 30)
+                {
+                    manager.WriteBit(0x3808, false);
+                    manager.WriteBit(0x3809, true);
+                }
             }
         }
     }

@@ -13,4 +13,25 @@ namespace WpfApp
         Trouble,
         Stop
     }
+
+    public enum HostRequestState
+    {
+        Idle,
+        Waiting,
+        Alarm,
+        Set
+    }
+    public enum CarrierHistoryType
+    {
+        Created,
+        DestinationSet,
+        Arrived,
+        CellTransfer,
+        Removed,
+
+        HostRequest,
+        HostResponse,
+        HostTimeout,
+        HostRetry
+    }
 }

@@ -142,10 +142,20 @@ namespace MaterialControlSimulator.Plc
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        byte[]? request =
-                            await ReadFrameAsync(
-                                stream,
-                                token);
+                        byte[]? request = null;
+                        try
+                        {
+                            request = await ReadFrameAsync(stream, token);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine(
+                                 $"[MC READ ERROR] {DateTime.Now:HH:mm:ss.fff} " +
+                                 $"Remote={client.Client.RemoteEndPoint}");
+
+                            Debug.WriteLine(ex.ToString());
+                            throw;
+                        }
 
                         if (request == null)
                             break;
@@ -154,9 +164,7 @@ namespace MaterialControlSimulator.Plc
 
                         try
                         {
-                            response =
-                                ProcessRequest(
-                                    request);
+                            response = ProcessRequest(request);
                         }
                         catch (Exception ex)
                         {
@@ -171,6 +179,17 @@ namespace MaterialControlSimulator.Plc
 
                         if (response.Length == 0)
                             continue;
+
+                        //Debug.WriteLine(
+                        //    $"REQ  {DateTime.Now:HH:mm:ss.fff} " +
+                        //    $"Len={request.Length} " +
+                        //    $"{BitConverter.ToString(request)}");
+
+                        //Debug.WriteLine(
+                        //    $"RESP {DateTime.Now:HH:mm:ss.fff} " +
+                        //    $"Len={response.Length} " +
+                        //    $"{BitConverter.ToString(response)}");
+
 
                         await stream.WriteAsync(
                             response.AsMemory(),
@@ -188,6 +207,10 @@ namespace MaterialControlSimulator.Plc
                 }
                 catch (Exception ex)
                 {
+                    Debug.WriteLine($"[MC PROCESS ERROR] {DateTime.Now:HH:mm:ss.fff}");
+
+                    Debug.WriteLine(ex.ToString());
+
                     Debug.WriteLine(
                         $"MC Client ERROR : {ex.Message}");
                 }
@@ -273,6 +296,7 @@ namespace MaterialControlSimulator.Plc
                 frame,
                 headerLength,
                 dataLength);
+
 
             return frame;
         }

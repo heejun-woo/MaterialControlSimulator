@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using WpfApp;
 
 namespace MaterialControlSimulator
 {
@@ -113,8 +114,6 @@ namespace MaterialControlSimulator
                 currentNode.Leave();
 
                 // 현재 노드 변경
-
-                App.CarrierHistory.Add(carrier.Id, carrier.CurrentNode.Id, nextNode.Id, "MOVE");
                 carrier.CurrentNode = nextNode;
 
                 // 실제 이동
@@ -124,6 +123,13 @@ namespace MaterialControlSimulator
                 //목적지 도착
                 if (session.Destination == nextNode)
                 {
+                    App.CarrierHistory.Add(
+                        session.Carrier.Id,
+                        session.Destination.Id,
+                        string.Empty,
+                        CarrierHistoryType.Arrived.ToString(),
+                        $"{session.Destination.Id} Arrived");
+
                     session.Destination = null;
                     session.Route = null;
                 }
@@ -153,7 +159,7 @@ namespace MaterialControlSimulator
         {
             await Carrier.MoveToAsync(command.Destination);
 
-            Logger.Info($"{Carrier.Id} → {command.Destination.Id}");
+            //Logger.Info($"{Carrier.Id} → {command.Destination.Id}");
         }
 
     }
