@@ -8,37 +8,131 @@
 
     <Grid>
 
-        <Border x:Name="MainBorder"
-                CornerRadius="6"
-                BorderThickness="2"
-                Background="#303840"
-                BorderBrush="#8090A0">
+        <!-- 그림자 -->
+        <Border
+            Margin="3,4,0,0"
+            CornerRadius="9"
+            Background="#55000000"/>
+
+        <!-- 본체 -->
+        <Border
+            x:Name="MainBorder"
+            Margin="1"
+            CornerRadius="9"
+            BorderThickness="2"
+            Padding="5">
+
+            <Border.Style>
+                <Style TargetType="Border">
+
+                    <Setter Property="BorderBrush"
+                            Value="#3A7FA8"/>
+
+                    <Setter Property="Background"
+                            Value="#243746"/>
+
+                    <Style.Triggers>
+
+                        <DataTrigger
+                            Binding="{Binding IsAlarm,
+                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Value="True">
+
+                            <Setter Property="BorderBrush"
+                                    Value="#FF4D4D"/>
+
+                            <Setter Property="Background"
+                                    Value="#492A2A"/>
+
+                        </DataTrigger>
+
+                    </Style.Triggers>
+
+                </Style>
+            </Border.Style>
 
             <Grid>
 
-                <TextBlock
-                    Text="{Binding Id,
-                        RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    Foreground="White"
-                    FontWeight="Bold"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="17"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="17"/>
+                </Grid.RowDefinitions>
 
-                <!-- Alarm -->
+                <!-- 제목 -->
+                <TextBlock
+                    Grid.Row="0"
+                    Text="HOST ROUTE"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Foreground="#D7E8F2"
+                    FontSize="9"
+                    FontWeight="Bold"
+                    FontFamily="Consolas"/>
+
+                <!-- 가운데 아이콘 -->
+                <Grid Grid.Row="1">
+
+                    <!-- 분기 다이아 -->
+                    <Border
+                        Width="20"
+                        Height="20"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        BorderBrush="#66C7F0"
+                        BorderThickness="2"
+                        Background="#183747"
+                        RenderTransformOrigin="0.5,0.5">
+
+                        <Border.RenderTransform>
+                            <RotateTransform Angle="45"/>
+                        </Border.RenderTransform>
+
+                    </Border>
+
+                    <!-- ? -->
+                    <TextBlock
+                        Text="?"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="White"
+                        FontSize="13"
+                        FontWeight="Bold"/>
+
+                    <!-- 좌측 분기 -->
+                    <TextBlock
+                        Text="‹"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="8,0,0,0"
+                        Foreground="#69CFF5"
+                        FontSize="20"
+                        FontWeight="Bold"/>
+
+                    <!-- 우측 분기 -->
+                    <TextBlock
+                        Text="›"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,8,0"
+                        Foreground="#69CFF5"
+                        FontSize="20"
+                        FontWeight="Bold"/>
+
+                </Grid>
+
+                <!-- 상태 -->
                 <Border
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="0,-5,-5,0"
-                    Width="16"
-                    Height="16"
-                    CornerRadius="8"
-                    Background="Red">
+                    Grid.Row="2"
+                    Height="14"
+                    CornerRadius="4"
+                    HorizontalAlignment="Stretch">
 
                     <Border.Style>
                         <Style TargetType="Border">
 
-                            <Setter Property="Visibility"
-                                    Value="Collapsed"/>
+                            <Setter Property="Background"
+                                    Value="#1A596B"/>
 
                             <Style.Triggers>
 
@@ -47,8 +141,8 @@
                                         RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Value="True">
 
-                                    <Setter Property="Visibility"
-                                            Value="Visible"/>
+                                    <Setter Property="Background"
+                                            Value="#A52E2E"/>
 
                                 </DataTrigger>
 
@@ -58,11 +152,36 @@
                     </Border.Style>
 
                     <TextBlock
-                        Text="!"
-                        Foreground="White"
-                        FontWeight="Bold"
                         HorizontalAlignment="Center"
-                        VerticalAlignment="Center"/>
+                        VerticalAlignment="Center"
+                        FontSize="8"
+                        FontWeight="Bold"
+                        Foreground="White">
+
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+
+                                <Setter Property="Text"
+                                        Value="READY"/>
+
+                                <Style.Triggers>
+
+                                    <DataTrigger
+                                        Binding="{Binding IsAlarm,
+                                            RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Value="True">
+
+                                        <Setter Property="Text"
+                                                Value="TIMEOUT"/>
+
+                                    </DataTrigger>
+
+                                </Style.Triggers>
+
+                            </Style>
+                        </TextBlock.Style>
+
+                    </TextBlock>
 
                 </Border>
 

@@ -178,7 +178,9 @@ namespace MaterialControlSimulator.SimulationType
                 Stroke = source.BorderBrush,
                 StrokeThickness = 3,
 
-                IsHitTestVisible = false
+                IsHitTestVisible = false,
+                Opacity = 0.4
+
             };
 
             return line;
