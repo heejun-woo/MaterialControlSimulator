@@ -101,6 +101,7 @@ namespace MaterialControlSimulator.Controls
         {
             App.Carriers.Register(this);
             App.CarrierManager.Register(this);
+
         }
 
         public async Task MoveToAsync(NodeControl node)

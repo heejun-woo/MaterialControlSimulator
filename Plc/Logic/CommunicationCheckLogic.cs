@@ -15,25 +15,33 @@ namespace MaterialControlSimulator.Plc.Logic
 
         private readonly Stopwatch _timer = new();
         private bool _firstScan = true;
+
+        int count = 0;
         public void Scan(PlcBindingManager manager)
         {
             #region 1초 주기로 실행
-            if (!_firstScan && _timer.ElapsedMilliseconds < 1000)
+            if (!_firstScan && _timer.ElapsedMilliseconds < 100)
             {
                 return;
             }
 
+            count += 1;
             _firstScan = false;
-            _timer.Restart(); 
+            _timer.Restart();
             #endregion
 
-            short check = manager.GetValue<short>("W3800");
-
-            if (manager.GetValue<short>("W3800") == 9999)
+            if (count > 9)
             {
-                manager.SetValue("W3800", (short)1);
+                short check = manager.GetValue<short>("W3800");
+
+                if (manager.GetValue<short>("W3800") == 9999)
+                {
+                    manager.SetValue("W3800", (short)1);
+                }
+                else manager.SetValue("W3800", manager.GetValue<short>("W3800") + 1);
+
+                count = 0;
             }
-            else manager.SetValue("W3800", manager.GetValue<short>("W3800") + 1);
 
             bool request = manager.ReadBit(0x3000);
 

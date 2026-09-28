@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:MaterialControlSimulator.Controls"
              mc:Ignorable="d" 
-             Width="60" Height="60" IsHitTestVisible="False">
+             Width="60" Height="60" IsHitTestVisible="False" >
     <Border
         CornerRadius="6"
         Background="#202830"

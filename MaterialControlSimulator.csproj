@@ -17,6 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="SimulationType\EL_1.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Simulator.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -13,5 +13,15 @@ namespace MaterialControlSimulator
         public int McPort { get; set; } = 5000;
 
         public int PlcIndex { get; set; } = 0;
+
+        public List<EquipmentPlcConfig> EquipmentPlcs { get; set; } = new List<EquipmentPlcConfig>();
+    }
+    public class EquipmentPlcConfig
+    {
+        public string Name { get; set; }
+
+        public int McPort { get; set; }
+
+        public int PlcIndex { get; set; }
     }
 }

@@ -55,15 +55,9 @@ namespace MaterialControlSimulator
             UserControl simulation =
                 _config.SimulationType switch
                 {
-                    "Sample" =>
-                        new SampleType(),
-
-                    //"TYPE_B" =>
-                    //    new SimulationTypeBControl(),
-
-                    _ =>
-                        throw new Exception(
-                            $"Unknown SimulationType: {_config.SimulationType}")
+                    "Sample" => new SampleType(),
+                    "EL1" => new EL_1(_config),
+                    _ => throw new Exception($"Unknown SimulationType: {_config.SimulationType}")
                 };
 
             SimulationHost.Content =
@@ -79,10 +73,7 @@ namespace MaterialControlSimulator
         {
             Dispatcher.Invoke(() =>
             {
-                DebugOutput.AppendText(
-                    message + Environment.NewLine);
-
-
+                DebugOutput.AppendText(message + Environment.NewLine);
                 DebugOutput.ScrollToEnd();
             });
         } 
@@ -289,16 +280,13 @@ namespace MaterialControlSimulator
 
         private NodeControl? _selectedNode;
 
-        private void EquipmentTree_SelectedItemChanged(
-            object sender,
-            RoutedPropertyChangedEventArgs<object> e)
+        private void EquipmentTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             if (e.NewValue is not NodeControl node)
                 return;
 
             // 기존 선택 해제
-            if (_selectedNode != null)
-                _selectedNode.IsSelected = false;
+            if (_selectedNode != null) _selectedNode.IsSelected = false;
 
             // 새 노드 선택
             _selectedNode = node;
