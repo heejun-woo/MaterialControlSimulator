@@ -7,7 +7,8 @@
     {
       "Name": "EQ01",
       "McPort": 5001,
-      "PlcIndex": 1
+      "PlcIndex": 1,
+      "Type" :"LS_PKG_EL1"
     }
   ]
 }

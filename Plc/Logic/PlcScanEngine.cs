@@ -17,37 +17,28 @@ namespace MaterialControlSimulator.Plc.Logic
 
         public int ScanIntervalMs { get; set; } = 20;
 
-        public bool IsRunning =>
-            _scanTask != null &&
-            !_scanTask.IsCompleted;
+        public bool IsRunning => _scanTask != null && !_scanTask.IsCompleted;
 
         public PlcScanEngine(PlcBindingManager manager)
         {
             _manager = manager;
         }
 
-        public void AddLogic(
-            IPlcLogic logic)
+        public void AddLogic(IPlcLogic logic)
         {
             _logics.Add(logic);
         }
 
         public void Start()
         {
-            if (IsRunning)
-                return;
+            if (IsRunning) return;
 
-            _cts =
-                new CancellationTokenSource();
+            _cts = new CancellationTokenSource();
 
-            _scanTask =
-                Task.Run(
-                    () => ScanLoopAsync(
-                        _cts.Token));
+            _scanTask = Task.Run(() => ScanLoopAsync(_cts.Token));
         }
 
-        private async Task ScanLoopAsync(
-            CancellationToken token)
+        private async Task ScanLoopAsync(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
@@ -55,21 +46,17 @@ namespace MaterialControlSimulator.Plc.Logic
                 {
                     foreach (var logic in _logics)
                     {
-                        logic.Scan(
-                            _manager);
+                        logic.Scan(_manager);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine(
-                        $"PLC Scan ERROR : {ex}");
+                    Debug.WriteLine($"PLC Scan ERROR : {ex}");
                 }
 
                 try
                 {
-                    await Task.Delay(
-                        ScanIntervalMs,
-                        token);
+                    await Task.Delay(ScanIntervalMs, token);
                 }
                 catch (OperationCanceledException)
                 {

@@ -27,8 +27,7 @@ namespace MaterialControlSimulator.SimulationType
     {
         private LayoutManager _layoutManager;
 
-        private EquipmentPlc _equipmentPlc;
-        private LS_PKG_EL1 _equipmentPlcWindow;
+        private EquipmentPlcWindow _equipmentPlcWindow;
 
         private readonly SimulatorConfig _config;
 
@@ -53,16 +52,15 @@ namespace MaterialControlSimulator.SimulationType
 
             if (config == null) return;
 
-            _equipmentPlc = new EquipmentPlc(config);
+            _equipmentPlcWindow = new EquipmentPlcWindow(config);
         }
 
         private void OpenEquipmentPlc()
         {
-            if (_equipmentPlc == null) return;
 
             if (_equipmentPlcWindow == null)
             {
-                _equipmentPlcWindow = new LS_PKG_EL1(_equipmentPlc);
+                InitializeEquipmentPlc();
 
                 _equipmentPlcWindow.Closed += (s, e) =>
                 {
@@ -73,6 +71,7 @@ namespace MaterialControlSimulator.SimulationType
             else
             {
                 _equipmentPlcWindow.Activate();
+                _equipmentPlcWindow.Show();
             }
         }
 

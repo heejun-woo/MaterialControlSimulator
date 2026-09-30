@@ -16,9 +16,12 @@ namespace MaterialControlSimulator
 
         public List<EquipmentPlcConfig> EquipmentPlcs { get; set; } = new List<EquipmentPlcConfig>();
     }
+
     public class EquipmentPlcConfig
     {
         public string Name { get; set; }
+
+        public string Type { get; set; }
 
         public int McPort { get; set; }
 

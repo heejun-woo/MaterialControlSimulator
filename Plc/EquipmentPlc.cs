@@ -2,6 +2,7 @@
 using MaterialControlSimulator.Plc.Logic;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,12 +28,9 @@ namespace MaterialControlSimulator
             Memory = new PlcMemory();
             BindingManager = new PlcBindingManager(Memory);
 
-            Server = new McProtocolServer(
-                Memory,
-                BindingManager);
+            Server = new McProtocolServer(Memory, BindingManager);
 
-            ScanEngine = new PlcScanEngine(
-                BindingManager);
+            ScanEngine = new PlcScanEngine(BindingManager);
         }
 
         public void Start()
@@ -47,6 +45,51 @@ namespace MaterialControlSimulator
             Server.Stop();
         }
     }
+
+    public class PlcBitGridItem : INotifyPropertyChanged
+    {
+        public string Address { get; set; }
+
+        private bool _value;
+        public bool Value
+        {
+            get => _value;
+            set
+            {
+                if (_value == value)
+                    return;
+
+                _value = value;
+
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+            }
+        }
+
+        public string Description { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
+
+    public class PlcWordGridItem : INotifyPropertyChanged
+    {
+        public string Address { get; set; }
+
+        private ushort _value;
+        public ushort Value
+        {
+            get => _value;
+            set
+            {
+                if (_value == value) return;
+
+                _value = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+            }
+        }
+
+        public string Description { get; set; }
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
 }
 
-}
+
