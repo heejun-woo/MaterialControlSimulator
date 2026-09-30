@@ -106,7 +106,7 @@
                                Style="{StaticResource ValueText}"/>
 
                             <TextBlock Grid.Row="2"
-                               Text="QTY"
+                               Text="-"
                                Margin="0,5"
                                VerticalAlignment="Center"
                                Style="{StaticResource LabelText}"/>
@@ -114,7 +114,7 @@
                             <TextBlock x:Name="NextQty"
                                Grid.Row="2"
                                Grid.Column="1"
-                               Text="30"
+                               Text=""
                                Margin="0,3"
                                Style="{StaticResource ValueText}"/>
                         </Grid>
@@ -170,7 +170,7 @@
                             <TextBlock x:Name="CurrentQty"
                                Grid.Row="2"
                                Grid.Column="1"
-                               Text="10 / 30"
+                               Text=""
                                Margin="0,3"
                                Style="{StaticResource ValueText}"/>
                         </Grid>

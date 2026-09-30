@@ -33,22 +33,52 @@ namespace MaterialControlSimulator.Controls.HMI
         {
             _plc = plc;
             _plc.BindingManager.Bind(NextLotId, TextBlock.TextProperty, "W3868", PlcDataType.String, 8);
+            _plc.BindingManager.Bind(NextModel, TextBlock.TextProperty, "W3860", PlcDataType.String, 5);
+
+            _plc.BindingManager.Bind(CurrentLotId, TextBlock.TextProperty, "W3878", PlcDataType.String, 8);
+            _plc.BindingManager.Bind(CurrentModel, TextBlock.TextProperty, "W3870", PlcDataType.String, 5);
+
+            _plc.BindingManager.Bind(LotInfoButton, Button.BackgroundProperty, "B3811", PlcDataType.Bool, value => (bool)value ? Brushes.Yellow : Brushes.LightGray);
+            _plc.BindingManager.Bind(LotStartButton, Button.BackgroundProperty, "B3812", PlcDataType.Bool, value => (bool)value ? Brushes.Yellow : Brushes.LightGray);
+            _plc.BindingManager.Bind(LotEndButton, Button.BackgroundProperty, "B3813", PlcDataType.Bool, value => (bool)value ? Brushes.Yellow : Brushes.LightGray);
+
+            //_plc.BindingManager.Bind(LotInfoButton, Button.ContentProperty, "B3811", PlcDataType.Bool, value => (bool)value ? "LOT INFO REQ" : "LOT INFO");
         }
 
         private void LotInfoButton_Click(object sender, RoutedEventArgs e)
         {
             if (_plc.BindingManager.ReadBit(0x3011) == false)
+            {
+                _plc.BindingManager.SetValue("W3816", 1);
+
                 _plc.BindingManager.WriteBit(0x3811, true);
+            }
         }
 
         private void LotStartButton_Click(object sender, RoutedEventArgs e)
         {
-            // LOT START PLC 요청
+            if (_plc.BindingManager.ReadBit(0x3012) == false)
+                _plc.BindingManager.WriteBit(0x3812, true);
         }
 
         private void LotEndButton_Click(object sender, RoutedEventArgs e)
         {
-            // LOT END PLC 요청
+            bool isLotRunning = _plc.BindingManager.ReadBit(0x380A);
+
+            if (_plc.BindingManager.ReadBit(0x3013) == false && isLotRunning)
+            {
+                _plc.BindingManager.WriteBit(0x380A, false);
+                _plc.BindingManager.SetValue("W3817", 1);
+
+                string? strLotID = _plc.BindingManager.GetValue<string>("W3878", 8);
+                _plc.BindingManager.SetValue("W3898", strLotID, 8);
+                _plc.BindingManager.SetValue("W3878", string.Empty, 8);
+
+                string? strProdID = _plc.BindingManager.GetValue<string>("W3870", 5);
+                _plc.BindingManager.SetValue("W3890", strProdID, 5);
+                _plc.BindingManager.SetValue("W3870", string.Empty, 5);
+                _plc.BindingManager.WriteBit(0x3813, true);
+            }
         }
 
         private void ForceOutButton_Click(object sender, RoutedEventArgs e)

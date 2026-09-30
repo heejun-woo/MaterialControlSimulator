@@ -53,6 +53,8 @@ namespace MaterialControlSimulator.Plc
             public PlcDataType DataType { get; set; }
 
             public int WordCount { get; set; }
+
+            public Func<object, object> Converter { get; set; }
         }
 
         private readonly Dictionary<string, List<ControlBinding>> _controlBindings = new Dictionary<string, List<ControlBinding>>(StringComparer.OrdinalIgnoreCase);
@@ -90,6 +92,42 @@ namespace MaterialControlSimulator.Plc
             RefreshControlBinding(binding);
         }
 
+        public void Bind(DependencyObject target, DependencyProperty property, string address, PlcDataType dataType, Func<object, object> converter, int wordCount = 1)
+        {
+            if (target == null ||
+                property == null ||
+                string.IsNullOrWhiteSpace(address))
+            {
+                return;
+            }
+
+            string key = NormalizeAddress(address);
+
+            var binding = new ControlBinding
+            {
+                Target = target,
+                Property = property,
+                Address = key,
+                DataType = dataType,
+                WordCount = Math.Max(1, wordCount),
+                Converter = converter
+            };
+
+            lock (_lock)
+            {
+                if (!_controlBindings.TryGetValue(
+                        key,
+                        out List<ControlBinding> list))
+                {
+                    list = new List<ControlBinding>();
+                    _controlBindings[key] = list;
+                }
+
+                list.Add(binding);
+            }
+
+            RefreshControlBinding(binding);
+        }
         private void RefreshControlBinding(ControlBinding binding)
         {
             object value;
@@ -127,6 +165,11 @@ namespace MaterialControlSimulator.Plc
 
             if (value == null)
                 return;
+
+            if (binding.Converter != null)
+            {
+                value = binding.Converter(value);
+            }
 
             // TextBlock.Text 같은 string Property도 처리
             Type propertyType = binding.Property.PropertyType;
@@ -466,11 +509,29 @@ namespace MaterialControlSimulator.Plc
 
             if (bindings.Count == 0)
             {
-                return WriteUnboundValue(
-                    device,
-                    deviceAddress,
-                    value,
-                    null);
+                bool result =
+                    WriteUnboundValue(
+                        device,
+                        deviceAddress,
+                        value,
+                        null);
+
+                if (!result)
+                    return false;
+
+                if (device == 'W')
+                {
+                    RefreshBindingsInRange(
+                        deviceAddress,
+                        1);
+                }
+                else if (device == 'B')
+                {
+                    RefreshControlBindings(
+                        NormalizeAddress(address));
+                }
+
+                return true;
             }
 
             try
@@ -576,7 +637,6 @@ namespace MaterialControlSimulator.Plc
                 return false;
             }
 
-            // Binding 있으면 Binding WordCount 우선
             if (HasBinding(address))
             {
                 return SetValue(
@@ -592,11 +652,29 @@ namespace MaterialControlSimulator.Plc
                 return false;
             }
 
-            return WriteUnboundValue(
-                device,
-                deviceAddress,
-                value,
-                wordCount);
+            bool result =
+                WriteUnboundValue(
+                    device,
+                    deviceAddress,
+                    value,
+                    wordCount);
+
+            if (!result)
+                return false;
+
+            if (device == 'W')
+            {
+                RefreshBindingsInRange(
+                    deviceAddress,
+                    wordCount);
+            }
+            else if (device == 'B')
+            {
+                RefreshControlBindings(
+                    NormalizeAddress(address));
+            }
+
+            return true;
         }
 
         // =========================================================
@@ -889,6 +967,10 @@ namespace MaterialControlSimulator.Plc
             _memory.WriteWord(
                 address,
                 value);
+
+            RefreshBindingsInRange(
+                address,
+                1);
         }
 
         // =========================================================

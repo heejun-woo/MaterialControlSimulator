@@ -17,7 +17,9 @@ namespace MaterialControlSimulator.Plc.EquipmentPlcWindow
         private void InitializeLogic()
         {
             ScanEngine.AddLogic(new CommunicationCheckLogic());
-            ScanEngine.AddLogic(new LotInfoRequestLogic(0x3811,0x3011,0x3128,0x3868));
+            ScanEngine.AddLogic(new LotInfoRequestLogic(0x3811, 0x3011, 0x3128));
+            ScanEngine.AddLogic(new LotIStartRequestLogic(0x3812, 0x3012));
+            ScanEngine.AddLogic(new LotIEndRequestLogic(0x3813, 0x3013));
         }
     }
 }

@@ -13,12 +13,11 @@ using WpfApp;
 
 namespace MaterialControlSimulator.Plc.Logic
 {
-    public class LotInfoRequestLogic : IPlcLogic
+    public class LotIEndRequestLogic : IPlcLogic
     {
 
         private readonly int _requestAddress;
         private readonly int _responseAddress;
-        private readonly int _lotIdAddress;
 
         private readonly int _timeoutSeconds;
 
@@ -31,15 +30,13 @@ namespace MaterialControlSimulator.Plc.Logic
         private bool _firstScan = true;
 
 
-        public LotInfoRequestLogic(
+        public LotIEndRequestLogic(
             int requestAddress,
             int responseAddress,
-            int lotIdAddress,
             int timeoutSeconds = 30)
         {
             _requestAddress = requestAddress;
             _responseAddress = responseAddress;
-            _lotIdAddress = lotIdAddress;
 
             _timeoutSeconds = timeoutSeconds;
         }
@@ -95,11 +92,6 @@ namespace MaterialControlSimulator.Plc.Logic
 
             if (response)
             {
-                string strLotID = manager.ReadStringFromMemory(_lotIdAddress, _LotIdLength);
-                manager.SetValue("W3868", strLotID, _LotIdLength);
-
-                string strProdID = manager.ReadStringFromMemory(0x3120, 5);
-                manager.SetValue("W3860", strProdID, 5);
 
                 manager.WriteBit(_requestAddress, false);
                 return;
