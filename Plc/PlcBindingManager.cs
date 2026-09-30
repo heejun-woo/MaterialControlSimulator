@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Windows;
 using System.Windows.Threading;
 
 namespace MaterialControlSimulator.Plc
@@ -41,6 +42,143 @@ namespace MaterialControlSimulator.Plc
         {
             _memory = memory;
         }
+
+        #region Bind 방식 추가
+        private sealed class ControlBinding
+        {
+            public DependencyObject Target { get; set; }
+            public DependencyProperty Property { get; set; }
+
+            public string Address { get; set; }
+            public PlcDataType DataType { get; set; }
+
+            public int WordCount { get; set; }
+        }
+
+        private readonly Dictionary<string, List<ControlBinding>> _controlBindings = new Dictionary<string, List<ControlBinding>>(StringComparer.OrdinalIgnoreCase);
+        public void Bind(DependencyObject target, DependencyProperty property, string address, PlcDataType dataType, int wordCount = 1)
+        {
+            if (target == null || property == null || string.IsNullOrWhiteSpace(address))
+            {
+                return;
+            }
+
+            string key = NormalizeAddress(address);
+
+            var binding =
+                new ControlBinding
+                {
+                    Target = target,
+                    Property = property,
+                    Address = key,
+                    DataType = dataType,
+                    WordCount = Math.Max(1, wordCount)
+                };
+
+            lock (_lock)
+            {
+                if (!_controlBindings.TryGetValue(key, out List<ControlBinding> list))
+                {
+                    list = new List<ControlBinding>();
+
+                    _controlBindings[key] = list;
+                }
+
+                list.Add(binding);
+            }
+
+            RefreshControlBinding(binding);
+        }
+
+        private void RefreshControlBinding(ControlBinding binding)
+        {
+            object value;
+
+            switch (binding.DataType)
+            {
+                case PlcDataType.String:
+                    value = GetValue<string>(binding.Address, binding.WordCount);
+                    break;
+
+                case PlcDataType.Bool:
+                    value = GetValue<bool>(binding.Address);
+                    break;
+
+                case PlcDataType.UInt16:
+                    value = GetValue<ushort>(binding.Address);
+                    break;
+
+                case PlcDataType.Int16:
+                    value = GetValue<short>(binding.Address);
+                    break;
+
+                case PlcDataType.UInt32:
+                    value = GetValue<uint>(binding.Address);
+                    break;
+
+                case PlcDataType.Int32:
+                    value = GetValue<int>(binding.Address);
+                    break;
+
+                default:
+                    value = GetValue(binding.Address);
+                    break;
+            }
+
+            if (value == null)
+                return;
+
+            // TextBlock.Text 같은 string Property도 처리
+            Type propertyType = binding.Property.PropertyType;
+
+            object convertedValue = value;
+
+            if (!propertyType.IsInstanceOfType(value))
+            {
+                convertedValue =
+                    Convert.ChangeType(
+                        value,
+                        propertyType);
+            }
+
+            Dispatcher dispatcher = binding.Target.Dispatcher;
+
+            if (dispatcher.CheckAccess())
+            {
+                binding.Target.SetValue(
+                    binding.Property,
+                    convertedValue);
+            }
+            else
+            {
+                dispatcher.BeginInvoke(
+                    new Action(() =>
+                    {
+                        binding.Target.SetValue(
+                            binding.Property,
+                            convertedValue);
+                    }));
+            }
+        }
+        public void RefreshControlBindings()
+        {
+            List<ControlBinding> bindings;
+
+            lock (_lock)
+            {
+                bindings =
+                    _controlBindings
+                        .Values
+                        .SelectMany(x => x)
+                        .ToList();
+            }
+
+            foreach (ControlBinding binding in bindings)
+            {
+                RefreshControlBinding(binding);
+            }
+        }
+        #endregion
 
         // =========================================================
         // REGISTER
@@ -705,6 +843,32 @@ namespace MaterialControlSimulator.Plc
                         $"{ex.Message}");
                 }
             }
+
+            RefreshControlBindings(plcAddress);
+        }
+        private void RefreshControlBindings(string address)
+        {
+            List<ControlBinding> bindings;
+
+            string key =
+                NormalizeAddress(address);
+
+            lock (_lock)
+            {
+                if (!_controlBindings.TryGetValue(
+                        key,
+                        out List<ControlBinding> list))
+                {
+                    return;
+                }
+
+                bindings = list.ToList();
+            }
+
+            foreach (ControlBinding binding in bindings)
+            {
+                RefreshControlBinding(binding);
+            }
         }
 
         // =========================================================
@@ -883,6 +1047,48 @@ namespace MaterialControlSimulator.Plc
                 RefreshBinding(
                     item.Address,
                     item.Cached);
+            }
+
+            RefreshControlBindingsInRange(startAddress,wordCount);
+        }
+        private void RefreshControlBindingsInRange(int startAddress, int wordCount)
+        {
+            List<ControlBinding> bindings;
+
+            int endAddress =
+                startAddress + wordCount - 1;
+
+            lock (_lock)
+            {
+                bindings =
+                    _controlBindings
+                        .Values
+                        .SelectMany(x => x)
+                        .Where(x =>
+                        {
+                            if (!TryParseAddress(
+                                    x.Address,
+                                    out char device,
+                                    out int address))
+                            {
+                                return false;
+                            }
+
+                            if (device != 'W')
+                                return false;
+
+                            int bindingEnd =
+                                address + x.WordCount - 1;
+
+                            return address <= endAddress &&
+                                   bindingEnd >= startAddress;
+                        })
+                        .ToList();
+            }
+
+            foreach (ControlBinding binding in bindings)
+            {
+                RefreshControlBinding(binding);
             }
         }
 
@@ -1143,7 +1349,7 @@ namespace MaterialControlSimulator.Plc
         // WordCount 전체를 항상 덮어씀
         // =========================================================
 
-        private void WriteStringToMemory(
+        public void WriteStringToMemory(
             int address,
             string value,
             int wordCount)
@@ -1199,7 +1405,7 @@ namespace MaterialControlSimulator.Plc
             }
         }
 
-        private string ReadStringFromMemory(
+        public string ReadStringFromMemory(
             int address,
             int wordCount)
         {
@@ -1252,7 +1458,7 @@ namespace MaterialControlSimulator.Plc
         // READ BOUND VALUE
         // =========================================================
 
-        private object? ReadBoundValue(
+        public object? ReadBoundValue(
             char device,
             int address,
             PlcDataType dataType,
@@ -1361,7 +1567,7 @@ namespace MaterialControlSimulator.Plc
         // UNBOUND SET
         // =========================================================
 
-        private bool WriteUnboundValue(
+        public bool WriteUnboundValue(
             char device,
             int address,
             object value,
@@ -1573,7 +1779,7 @@ namespace MaterialControlSimulator.Plc
         // GENERIC MEMORY READ
         // =========================================================
 
-        private object? ReadMemoryValue(
+        public object? ReadMemoryValue(
             string address,
             Type type,
             int? wordCount)
@@ -1780,7 +1986,7 @@ namespace MaterialControlSimulator.Plc
         // CONVERT PROPERTY -> PLC TYPE
         // =========================================================
 
-        private object? ConvertToPlcType(
+        public object? ConvertToPlcType(
             object? value,
             PlcDataType dataType)
         {

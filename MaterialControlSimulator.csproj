@@ -28,4 +28,15 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Plc\Logic\G2_Carrier Management\" />
+    <Folder Include="Plc\Logic\C2_State Management\" />
+    <Folder Include="Plc\Logic\G1_Material Management\" />
+    <Folder Include="Plc\Logic\G4_Cell Management\" />
+    <Folder Include="Plc\Logic\G6_Equipment UBM Parts Management\" />
+    <Folder Include="Plc\Logic\T3_Transfer Management\" />
+    <Folder Include="Plc\Logic\T2_Active Machine State Management\" />
+    <Folder Include="Plc\Logic\T1_Passive Machine State Management\" />
+  </ItemGroup>
+
 </Project>

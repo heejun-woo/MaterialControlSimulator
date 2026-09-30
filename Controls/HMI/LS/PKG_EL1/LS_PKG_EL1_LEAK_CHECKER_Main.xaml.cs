@@ -1,4 +1,5 @@
-﻿using MaterialControlSimulator.Plc.EquipmentPlcWindow;
+﻿using MaterialControlSimulator.Plc;
+using MaterialControlSimulator.Plc.EquipmentPlcWindow;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,11 +32,13 @@ namespace MaterialControlSimulator.Controls.HMI
         public void Initialize(LS_PKG_EL1_LEAK_CHECKER_PLC plc)
         {
             _plc = plc;
+            _plc.BindingManager.Bind(NextLotId, TextBlock.TextProperty, "W3868", PlcDataType.String, 8);
         }
 
         private void LotInfoButton_Click(object sender, RoutedEventArgs e)
         {
-            // LOT INFO 화면 또는 팝업
+            if (_plc.BindingManager.ReadBit(0x3011) == false)
+                _plc.BindingManager.WriteBit(0x3811, true);
         }
 
         private void LotStartButton_Click(object sender, RoutedEventArgs e)

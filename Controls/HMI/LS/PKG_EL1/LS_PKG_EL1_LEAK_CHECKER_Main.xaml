@@ -88,7 +88,7 @@
 
                             <TextBlock x:Name="NextLotId"
                                Grid.Column="1"
-                               Text="NEXT-LOT-001"
+                               Text="NEXT LOT ID"
                                Margin="0,3"
                                Style="{StaticResource ValueText}"/>
 
@@ -208,7 +208,7 @@
                 Padding="15">
 
             <StackPanel>
-                <TextBlock Text="MATERIAL"
+                <TextBlock Text="MATERIAL / CARRIER"
                            FontSize="17"
                            FontWeight="Bold"
                            Margin="0,0,0,10"/>

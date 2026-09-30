@@ -39,6 +39,7 @@ namespace MaterialControlSimulator.Controls.HMI
             _timer.Start();
 
             UpdateCommStatus();
+            MainControl.Initialize(PLC);
         }
 
         private void Timer_Tick(object sender, EventArgs e)
